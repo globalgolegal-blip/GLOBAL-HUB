@@ -100,13 +100,25 @@ export default function Dashboard() {
 
   // Conteos por categoría (totales sin filtro de fecha ni región)
   const counts = CATEGORIAS.reduce((acc, cat) => {
-    acc[cat.key] = contratos.filter(c => c._estado === cat.key).length
+    if (cat.key === 'INGRESADO') {
+      // "Contratos emitidos" = todos los que tienen ENVIADO='SI', sin importar si ya firmaron
+      acc[cat.key] = contratos.filter(c =>
+        (c['CONTRATO ENVIADO'] || '').trim().toUpperCase() === 'SI'
+      ).length
+    } else {
+      acc[cat.key] = contratos.filter(c => c._estado === cat.key).length
+    }
     return acc
   }, {})
 
   // Contratos filtrados para la lista
   const contratosFiltrados = contratos.filter(c => {
-    if (c._estado !== categoriaActiva) return false
+    if (categoriaActiva === 'INGRESADO') {
+      // Mostrar todos con ENVIADO='SI' independientemente del estado de firma
+      if ((c['CONTRATO ENVIADO'] || '').trim().toUpperCase() !== 'SI') return false
+    } else {
+      if (c._estado !== categoriaActiva) return false
+    }
 
     if (fechaDesde || fechaHasta) {
       const colFecha = COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO'
