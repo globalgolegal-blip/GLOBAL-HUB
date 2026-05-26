@@ -190,8 +190,8 @@ export default function Dashboard() {
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-            {/* Meta mensual */}
-            {meta && <MetaCard meta={meta} totalValidados={totalValidados} />}
+            {/* Meta mensual — oculto */}
+            {/* {meta && <MetaCard meta={meta} totalValidados={totalValidados} />} */}
 
             {/* Tarjetas de categorías — 2 columnas */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
