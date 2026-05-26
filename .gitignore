@@ -1,0 +1,13 @@
+# Dependencias
+node_modules/
+.next/
+
+# Variables de entorno — NUNCA subir a GitHub
+.env.local
+.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+.vercel
