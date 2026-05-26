@@ -98,13 +98,14 @@ export default function Dashboard() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
+  // Estados que implican que el contrato fue enviado con ENVIADO='SI'
+  const ESTADOS_EMITIDOS = ['PENDIENTE', 'VALIDADO', 'OBSERVADO', 'VENCIDO']
+
   // Conteos por categoría (totales sin filtro de fecha ni región)
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
-      // "Contratos emitidos" = todos los que tienen ENVIADO='SI', sin importar si ya firmaron
-      acc[cat.key] = contratos.filter(c =>
-        (c['CONTRATO ENVIADO'] || '').trim().toUpperCase() === 'SI'
-      ).length
+      // "Contratos emitidos" = todos los que fueron enviados (cualquier estado post-envío)
+      acc[cat.key] = contratos.filter(c => ESTADOS_EMITIDOS.includes(c._estado)).length
     } else {
       acc[cat.key] = contratos.filter(c => c._estado === cat.key).length
     }
@@ -114,8 +115,8 @@ export default function Dashboard() {
   // Contratos filtrados para la lista
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'INGRESADO') {
-      // Mostrar todos con ENVIADO='SI' independientemente del estado de firma
-      if ((c['CONTRATO ENVIADO'] || '').trim().toUpperCase() !== 'SI') return false
+      // Mostrar todos los contratos enviados, sin importar si ya firmaron
+      if (!ESTADOS_EMITIDOS.includes(c._estado)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
