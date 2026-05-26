@@ -101,13 +101,26 @@ export default function Dashboard() {
   // Estados que implican que el contrato fue enviado con ENVIADO='SI'
   const ESTADOS_EMITIDOS = ['PENDIENTE', 'VALIDADO', 'OBSERVADO', 'VENCIDO']
 
-  // Conteos por categoría (totales sin filtro de fecha ni región)
+  // Helper: verifica si un contrato cae en el rango de fechas activo
+  function matchFecha(c, colFecha) {
+    if (!fechaDesde && !fechaHasta) return true
+    const fechaISO = normalizarFecha(c[colFecha])
+    if (!fechaISO) return false
+    if (fechaDesde && fechaISO < fechaDesde) return false
+    if (fechaHasta && fechaISO > fechaHasta) return false
+    return true
+  }
+
+  // Conteos por categoría filtrados por el plazo activo (igual que la lista)
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
-      // "Contratos emitidos" = todos los que fueron enviados (cualquier estado post-envío)
-      acc[cat.key] = contratos.filter(c => ESTADOS_EMITIDOS.includes(c._estado)).length
+      acc[cat.key] = contratos.filter(c =>
+        ESTADOS_EMITIDOS.includes(c._estado) && matchFecha(c, 'FECHA DE ENVÍO')
+      ).length
     } else {
-      acc[cat.key] = contratos.filter(c => c._estado === cat.key).length
+      acc[cat.key] = contratos.filter(c =>
+        c._estado === cat.key && matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO')
+      ).length
     }
     return acc
   }, {})
@@ -122,7 +135,9 @@ export default function Dashboard() {
     }
 
     if (fechaDesde || fechaHasta) {
-      const colFecha = COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO'
+      const colFecha = categoriaActiva === 'INGRESADO'
+        ? 'FECHA DE ENVÍO'
+        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
       const fechaISO = normalizarFecha(c[colFecha])
       if (!fechaISO) return false
       if (fechaDesde && fechaISO < fechaDesde) return false
