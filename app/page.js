@@ -25,6 +25,11 @@ const COL_FECHA = {
   VENCIDO:            'FECHA DE VENCIMIENTO',
 }
 
+// Obtiene la fecha de envío tolerando acento (ENVÍO vs ENVIO)
+function getFechaEnvio(c) {
+  return c['FECHA DE ENVÍO'] || c['FECHA DE ENVIO'] || ''
+}
+
 function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
@@ -118,13 +123,14 @@ export default function Dashboard() {
   // Un contrato está "emitido" si tiene FECHA DE ENVÍO con valor (independiente del estado de firma)
   // Esto incluye: recién enviados (INGRESADO con FIRMADO en blanco), pendientes, validados, vencidos, observados
   function esEmitido(c) {
-    return !!normalizarFecha(c['FECHA DE ENVÍO']) && c._estado !== 'CONTRATO_OBSERVADO'
+    return !!normalizarFecha(getFechaEnvio(c)) && c._estado !== 'CONTRATO_OBSERVADO'
   }
 
   // Helper: verifica si un contrato cae en el rango de fechas activo
   function matchFecha(c, colFecha) {
     if (!fechaDesde && !fechaHasta) return true
-    const fechaISO = normalizarFecha(c[colFecha])
+    const rawVal = (colFecha === 'FECHA DE ENVÍO' || colFecha === 'FECHA DE ENVIO') ? getFechaEnvio(c) : (c[colFecha] || '')
+    const fechaISO = normalizarFecha(rawVal)
     if (!fechaISO) return false
     if (fechaDesde && fechaISO < fechaDesde) return false
     if (fechaHasta && fechaISO > fechaHasta) return false
@@ -165,10 +171,7 @@ export default function Dashboard() {
       const colFecha = categoriaActiva === 'INGRESADO'
         ? 'FECHA DE ENVÍO'
         : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
-      const fechaISO = normalizarFecha(c[colFecha])
-      if (!fechaISO) return false
-      if (fechaDesde && fechaISO < fechaDesde) return false
-      if (fechaHasta && fechaISO > fechaHasta) return false
+      if (!matchFecha(c, colFecha)) return false
     }
 
     if (ciudadActiva) {
@@ -362,51 +365,4 @@ export default function Dashboard() {
                         fontSize: '12px', padding: '5px 12px', borderRadius: '20px',
                         background: regionActiva === r.key ? '#1A2238' : 'white',
                         color: regionActiva === r.key ? 'white' : '#1A2238',
-                        border: regionActiva === r.key ? '0.5px solid #1A2238' : '0.5px solid #B4B2A9',
-                        cursor: 'pointer', transition: 'all 0.15s',
-                      }}>
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Panel de ciudades */}
-                {regionActiva && ciudadesRegion.length > 0 && (
-                  <div style={{ marginTop: '8px', background: '#F1EFE8', borderLeft: '3px solid #1A2238', borderRadius: '8px', padding: '8px 10px' }}>
-                    <p style={{ fontSize: '10px', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                      Ciudades · {regionActiva}
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {ciudadesRegion.map(ciudad => (
-                        <button key={ciudad}
-                          onClick={() => setCiudadActiva(ciudadActiva === ciudad ? null : ciudad)}
-                          style={{
-                            fontSize: '11px', padding: '3px 10px', borderRadius: '20px',
-                            background: ciudadActiva === ciudad ? '#1A2238' : 'white',
-                            color: ciudadActiva === ciudad ? 'white' : '#444441',
-                            border: ciudadActiva === ciudad ? '0.5px solid #1A2238' : '0.5px solid #B4B2A9',
-                            cursor: 'pointer', transition: 'all 0.15s',
-                          }}>
-                          {ciudad}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Lista de contratos */}
-            <ContractList
-              contratos={contratosFiltrados}
-              categoriaLabel={categoriaLabel}
-              plazoLabel={plazoLabel}
-              regionLabel={regionLabel}
-            />
-
-          </div>
-        )}
-      </main>
-    </div>
-  )
-}
+                        border: regionActiva ===
