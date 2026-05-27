@@ -115,8 +115,11 @@ export default function Dashboard() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
-  // Estados que implican que el contrato fue enviado con ENVIADO='SI'
-  const ESTADOS_EMITIDOS = ['PENDIENTE', 'VALIDADO', 'OBSERVADO', 'VENCIDO']
+  // Un contrato está "emitido" si tiene FECHA DE ENVÍO con valor (independiente del estado de firma)
+  // Esto incluye: recién enviados (INGRESADO con FIRMADO en blanco), pendientes, validados, vencidos, observados
+  function esEmitido(c) {
+    return !!normalizarFecha(c['FECHA DE ENVÍO']) && c._estado !== 'CONTRATO_OBSERVADO'
+  }
 
   // Helper: verifica si un contrato cae en el rango de fechas activo
   function matchFecha(c, colFecha) {
@@ -139,7 +142,7 @@ export default function Dashboard() {
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
-        ESTADOS_EMITIDOS.includes(c._estado) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
+        esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
@@ -152,8 +155,8 @@ export default function Dashboard() {
   // Contratos filtrados para la lista
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'INGRESADO') {
-      // Mostrar todos los contratos enviados, sin importar si ya firmaron
-      if (!ESTADOS_EMITIDOS.includes(c._estado)) return false
+      // Mostrar todos los contratos con FECHA DE ENVÍO, sin importar estado de firma
+      if (!esEmitido(c)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
