@@ -15,7 +15,6 @@ const CATEGORIAS = [
   { key: 'VENCIDO',            label: 'Contratos vencidos',    color: '#A32D2D' },
 ]
 
-// Columna de fecha que aplica según la categoría seleccionada
 const COL_FECHA = {
   PENDIENTE:          'FECHA DE ENVÍO',
   INGRESADO:          'FECHA DE ENVÍO',
@@ -25,7 +24,6 @@ const COL_FECHA = {
   VENCIDO:            'FECHA DE VENCIMIENTO',
 }
 
-// Obtiene la fecha de envío tolerando acento (ENVÍO vs ENVIO)
 function getFechaEnvio(c) {
   return c['FECHA DE ENVÍO'] || c['FECHA DE ENVIO'] || ''
 }
@@ -34,16 +32,14 @@ function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-function fechaHoyStr() {
-  return fmtDate(new Date())
-}
+function fechaHoyStr() { return fmtDate(new Date()) }
 
 function fechaAyerStr() {
   const a = new Date(); a.setDate(a.getDate() - 1)
   return fmtDate(a)
 }
 
-// Antes de las 12pm → "ayer" (reporte matutino). Desde las 12pm → "hoy"
+// Antes de las 12pm: "ayer" (reporte matutino). Desde las 12pm: "hoy"
 function getLapsoDefault() {
   return new Date().getHours() < 12 ? 'ayer' : 'hoy'
 }
@@ -71,23 +67,24 @@ export default function Dashboard() {
   const [contratos, setContratos] = useState([])
   const [ultimaAct, setUltimaAct] = useState(null)
 
-  // Filtros — default inteligente: antes 12pm → ayer, desde 12pm → hoy
-  const [categoriaActiva, setCategoriaActiva]         = useState('PENDIENTE')
-  const [lapsoActivo, setLapsoActivo]                 = useState(getLapsoDefault)
-  const [fechaDesde, setFechaDesde]                   = useState(getFechaDefault)
-  const [fechaHasta, setFechaHasta]                   = useState(getFechaDefault)
+  const [categoriaActiva, setCategoriaActiva]           = useState('PENDIENTE')
+  const [lapsoActivo, setLapsoActivo]                   = useState(getLapsoDefault)
+  const [lapsoModificado, setLapsoModificado]           = useState(false)   // true cuando el usuario elige un plazo manualmente
+  const [fechaDesde, setFechaDesde]                     = useState(getFechaDefault)
+  const [fechaHasta, setFechaHasta]                     = useState(getFechaDefault)
   const [mostrarPersonalizado, setMostrarPersonalizado] = useState(false)
-  const [regionActiva, setRegionActiva]               = useState(null)
-  const [ciudadActiva, setCiudadActiva]               = useState(null)
-  const [busqueda, setBusqueda]                       = useState('')
+  const [regionActiva, setRegionActiva]                 = useState(null)
+  const [ciudadActiva, setCiudadActiva]                 = useState(null)
+  const [busqueda, setBusqueda]                         = useState('')
 
   const aplicarLapso = useCallback((lapso) => {
-    const hoy = new Date(); hoy.setHours(0,0,0,0)
+    const hoy  = new Date(); hoy.setHours(0,0,0,0)
     const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
     if (lapso === 'hoy')           { setFechaDesde(fmtDate(hoy));  setFechaHasta(fmtDate(hoy)) }
     if (lapso === 'ayer')          { setFechaDesde(fmtDate(ayer)); setFechaHasta(fmtDate(ayer)) }
     if (lapso === 'personalizado') { setFechaDesde(''); setFechaHasta('') }
     setLapsoActivo(lapso)
+    setLapsoModificado(true)   // el usuario eligió explícitamente un plazo
     setMostrarPersonalizado(lapso === 'personalizado')
   }, [])
 
@@ -121,15 +118,16 @@ export default function Dashboard() {
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
   // Un contrato está "emitido" si tiene FECHA DE ENVÍO con valor (independiente del estado de firma)
-  // Esto incluye: recién enviados (INGRESADO con FIRMADO en blanco), pendientes, validados, vencidos, observados
   function esEmitido(c) {
     return !!normalizarFecha(getFechaEnvio(c)) && c._estado !== 'CONTRATO_OBSERVADO'
   }
 
-  // Helper: verifica si un contrato cae en el rango de fechas activo
+  // Verifica si un contrato cae en el rango de fechas activo
   function matchFecha(c, colFecha) {
     if (!fechaDesde && !fechaHasta) return true
-    const rawVal = (colFecha === 'FECHA DE ENVÍO' || colFecha === 'FECHA DE ENVIO') ? getFechaEnvio(c) : (c[colFecha] || '')
+    const rawVal = (colFecha === 'FECHA DE ENVÍO' || colFecha === 'FECHA DE ENVIO')
+      ? getFechaEnvio(c)
+      : (c[colFecha] || '')
     const fechaISO = normalizarFecha(rawVal)
     if (!fechaISO) return false
     if (fechaDesde && fechaISO < fechaDesde) return false
@@ -137,51 +135,67 @@ export default function Dashboard() {
     return true
   }
 
-  // Helper: verifica si un contrato pertenece a la región/ciudad activa
+  // Verifica si un contrato pertenece a la región/ciudad activa
   function matchLugar(c) {
     if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
     if (regionActiva) return c._region === regionActiva
     return true
   }
 
-  // Conteos por categoría filtrados por plazo + región/ciudad activos
+  // Conteos por categoría:
+  //   PENDIENTE  → al cargar: total (sin filtro de fecha). Al elegir plazo: filtra por fecha de envío.
+  //   INGRESADO  → siempre filtra por plazo activo (ayer antes de 12pm, hoy después).
+  //   El resto   → filtra por su columna de fecha correspondiente.
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
         esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
+    } else if (cat.key === 'PENDIENTE') {
+      acc[cat.key] = contratos.filter(c =>
+        c._estado === 'PENDIENTE' &&
+        (lapsoModificado ? matchFecha(c, COL_FECHA['PENDIENTE']) : true) &&
+        matchLugar(c)
+      ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
-        c._estado === cat.key && matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') && matchLugar(c)
+        c._estado === cat.key &&
+        matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') &&
+        matchLugar(c)
       ).length
     }
     return acc
   }, {})
 
-  // Contratos filtrados para la lista
+  // Lista de contratos filtrada
   const contratosFiltrados = contratos.filter(c => {
+    // 1. Filtro por categoría
     if (categoriaActiva === 'INGRESADO') {
-      // Mostrar todos los contratos con FECHA DE ENVÍO, sin importar estado de firma
       if (!esEmitido(c)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
 
-    if (fechaDesde || fechaHasta) {
+    // 2. Filtro por fecha
+    //    PENDIENTE: solo aplica si el usuario eligió un plazo manualmente
+    const aplicarPlazo = categoriaActiva === 'PENDIENTE' ? lapsoModificado : true
+    if (aplicarPlazo && (fechaDesde || fechaHasta)) {
       const colFecha = categoriaActiva === 'INGRESADO'
         ? 'FECHA DE ENVÍO'
         : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
       if (!matchFecha(c, colFecha)) return false
     }
 
+    // 3. Filtro por región/ciudad
     if (ciudadActiva) {
       if ((c['CIUDAD'] || '').toUpperCase() !== ciudadActiva.toUpperCase()) return false
     } else if (regionActiva) {
       if (c._region !== regionActiva) return false
     }
 
+    // 4. Búsqueda
     if (busqueda.trim()) {
-      const q = busqueda.trim().toLowerCase()
+      const q      = busqueda.trim().toLowerCase()
       const nombre = (c['CLIENTE'] || '').toLowerCase()
       const doi    = String(c['DOI'] || '').toLowerCase()
       if (!nombre.includes(q) && !doi.includes(q)) return false
@@ -194,15 +208,21 @@ export default function Dashboard() {
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : null
 
-  const totalValidados = contratos.filter(c => c._estado === 'VALIDADO').length
+  const totalValidados  = contratos.filter(c => c._estado === 'VALIDADO').length
   const ciudadesRegion  = regionActiva ? ciudadesDeRegion(regionActiva) : []
+  const categoriaLabel  = CATEGORIAS.find(c => c.key === categoriaActiva)?.label || ''
 
-  const categoriaLabel = CATEGORIAS.find(c => c.key === categoriaActiva)?.label || ''
   const plazoLabel = lapsoActivo === 'hoy'  ? 'HOY'
                    : lapsoActivo === 'ayer' ? 'AYER'
-                   : (fechaDesde && fechaHasta) ? `${fechaDesde.split('-').reverse().join('/')} – ${fechaHasta.split('-').reverse().join('/')}`
-                   : fechaDesde ? `DESDE ${fechaDesde.split('-').reverse().join('/')}` : ''
-  const regionLabel = ciudadActiva || regionActiva || 'TODAS'
+                   : (fechaDesde && fechaHasta)
+                       ? `${fechaDesde.split('-').reverse().join('/')} – ${fechaHasta.split('-').reverse().join('/')}`
+                   : fechaDesde
+                       ? `DESDE ${fechaDesde.split('-').reverse().join('/')}`
+                       : ''
+
+  // Para PENDIENTE sin filtro activo, mostramos "TOTAL"
+  const plazoEfectivo = (categoriaActiva === 'PENDIENTE' && !lapsoModificado) ? 'TOTAL' : plazoLabel
+  const regionLabel   = ciudadActiva || regionActiva || 'TODAS'
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
@@ -353,16 +373,67 @@ export default function Dashboard() {
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {[
-                    { key: null,                  label: 'Todas' },
-                    { key: 'LIMA METROPOLITANA',  label: 'Lima Met.' },
-                    { key: 'NORTE',               label: 'Norte' },
-                    { key: 'SUR',                 label: 'Sur' },
-                    { key: 'ORIENTE',             label: 'Oriente' },
-                    { key: 'CENTRO',              label: 'Centro' },
+                    { key: null,                 label: 'Todas' },
+                    { key: 'LIMA METROPOLITANA', label: 'Lima Met.' },
+                    { key: 'NORTE',              label: 'Norte' },
+                    { key: 'SUR',                label: 'Sur' },
+                    { key: 'ORIENTE',            label: 'Oriente' },
+                    { key: 'CENTRO',             label: 'Centro' },
                   ].map(r => (
                     <button key={r.label} onClick={() => { setRegionActiva(r.key); setCiudadActiva(null) }}
                       style={{
                         fontSize: '12px', padding: '5px 12px', borderRadius: '20px',
                         background: regionActiva === r.key ? '#1A2238' : 'white',
                         color: regionActiva === r.key ? 'white' : '#1A2238',
-                        border: regionActiva ===
+                        border: regionActiva === r.key ? '0.5px solid #1A2238' : '0.5px solid #B4B2A9',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Ciudades de la región seleccionada */}
+                {ciudadesRegion.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                    {ciudadesRegion.map(ciudad => (
+                      <button key={ciudad}
+                        onClick={() => setCiudadActiva(ciudadActiva === ciudad ? null : ciudad)}
+                        style={{
+                          fontSize: '11px', padding: '4px 10px', borderRadius: '20px',
+                          background: ciudadActiva === ciudad ? '#534AB7' : '#F1EFE8',
+                          color: ciudadActiva === ciudad ? 'white' : '#444441',
+                          border: ciudadActiva === ciudad ? '0.5px solid #534AB7' : '0.5px solid #D3D1C7',
+                          cursor: 'pointer', transition: 'all 0.15s',
+                        }}>
+                        {ciudad}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Barra de contexto: categoría activa · plazo · región */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A2238' }}>
+                {categoriaLabel}
+                <span style={{ fontWeight: '400', color: '#888780' }}> · {plazoEfectivo}</span>
+                {regionLabel !== 'TODAS' && (
+                  <span style={{ fontWeight: '400', color: '#888780' }}> · {regionLabel}</span>
+                )}
+              </span>
+              <span style={{ fontSize: '12px', color: '#888780' }}>
+                {contratosFiltrados.length} contrato{contratosFiltrados.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Lista de contratos */}
+            <ContractList contratos={contratosFiltrados} categoriaActiva={categoriaActiva} />
+
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
