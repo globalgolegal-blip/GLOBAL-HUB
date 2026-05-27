@@ -25,9 +25,26 @@ const COL_FECHA = {
   VENCIDO:            'FECHA DE VENCIMIENTO',
 }
 
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
 function fechaHoyStr() {
-  const h = new Date()
-  return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`
+  return fmtDate(new Date())
+}
+
+function fechaAyerStr() {
+  const a = new Date(); a.setDate(a.getDate() - 1)
+  return fmtDate(a)
+}
+
+// Antes de las 12pm → "ayer" (reporte matutino). Desde las 12pm → "hoy"
+function getLapsoDefault() {
+  return new Date().getHours() < 12 ? 'ayer' : 'hoy'
+}
+
+function getFechaDefault() {
+  return getLapsoDefault() === 'ayer' ? fechaAyerStr() : fechaHoyStr()
 }
 
 function normalizarFecha(val) {
@@ -49,11 +66,11 @@ export default function Dashboard() {
   const [contratos, setContratos] = useState([])
   const [ultimaAct, setUltimaAct] = useState(null)
 
-  // Filtros — valores por defecto según especificación
+  // Filtros — default inteligente: antes 12pm → ayer, desde 12pm → hoy
   const [categoriaActiva, setCategoriaActiva]         = useState('PENDIENTE')
-  const [lapsoActivo, setLapsoActivo]                 = useState('hoy')
-  const [fechaDesde, setFechaDesde]                   = useState(fechaHoyStr)
-  const [fechaHasta, setFechaHasta]                   = useState(fechaHoyStr)
+  const [lapsoActivo, setLapsoActivo]                 = useState(getLapsoDefault)
+  const [fechaDesde, setFechaDesde]                   = useState(getFechaDefault)
+  const [fechaHasta, setFechaHasta]                   = useState(getFechaDefault)
   const [mostrarPersonalizado, setMostrarPersonalizado] = useState(false)
   const [regionActiva, setRegionActiva]               = useState(null)
   const [ciudadActiva, setCiudadActiva]               = useState(null)
@@ -61,9 +78,9 @@ export default function Dashboard() {
 
   const aplicarLapso = useCallback((lapso) => {
     const hoy = new Date(); hoy.setHours(0,0,0,0)
-    const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-    if (lapso === 'hoy')    { setFechaDesde(fmt(hoy)); setFechaHasta(fmt(hoy)) }
-    if (lapso === 'semana') { const a=new Date(hoy); a.setDate(a.getDate()-6); setFechaDesde(fmt(a)); setFechaHasta(fmt(hoy)) }
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
+    if (lapso === 'hoy')           { setFechaDesde(fmtDate(hoy));  setFechaHasta(fmtDate(hoy)) }
+    if (lapso === 'ayer')          { setFechaDesde(fmtDate(ayer)); setFechaHasta(fmtDate(ayer)) }
     if (lapso === 'personalizado') { setFechaDesde(''); setFechaHasta('') }
     setLapsoActivo(lapso)
     setMostrarPersonalizado(lapso === 'personalizado')
@@ -112,6 +129,7 @@ export default function Dashboard() {
   }
 
   // Conteos por categoría filtrados por el plazo activo (igual que la lista)
+  // CONTRATO_OBSERVADO no tiene fecha propia → siempre muestra total
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
@@ -168,8 +186,8 @@ export default function Dashboard() {
   const ciudadesRegion  = regionActiva ? ciudadesDeRegion(regionActiva) : []
 
   const categoriaLabel = CATEGORIAS.find(c => c.key === categoriaActiva)?.label || ''
-  const plazoLabel = lapsoActivo === 'hoy'    ? 'HOY'
-                   : lapsoActivo === 'semana' ? 'ÚLTIMA SEMANA'
+  const plazoLabel = lapsoActivo === 'hoy'  ? 'HOY'
+                   : lapsoActivo === 'ayer' ? 'AYER'
                    : (fechaDesde && fechaHasta) ? `${fechaDesde.split('-').reverse().join('/')} – ${fechaHasta.split('-').reverse().join('/')}`
                    : fechaDesde ? `DESDE ${fechaDesde.split('-').reverse().join('/')}` : ''
   const regionLabel = ciudadActiva || regionActiva || 'TODAS'
@@ -288,7 +306,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {[
                     { id: 'hoy',           label: 'Hoy' },
-                    { id: 'semana',        label: 'Última semana' },
+                    { id: 'ayer',          label: 'Ayer' },
                     { id: 'personalizado', label: 'Personalizado' },
                   ].map(({ id, label }) => (
                     <button key={id} onClick={() => aplicarLapso(id)}
