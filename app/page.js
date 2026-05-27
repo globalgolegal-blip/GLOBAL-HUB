@@ -428,6 +428,27 @@ export default function Dashboard() {
             {/* Lista de contratos */}
             <ContractList key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')} contratos={contratosFiltrados} />
 
+          {/* Footer */}
+          <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
+            <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
+              POWERED BY LEGAL TEAM GO
+            </p>
+            <p style={{ fontSize: '10px', color: '#5F5E5A', letterSpacing: '0.06em', marginBottom: '4px' }}>
+              IMPULSADO POR EL EQUIPO LEGAL DE GO
+            </p>
+            <p style={{ fontSize: '10px', color: '#888780', letterSpacing: '0.06em', marginBottom: '16px' }}>
+              GO EQUIPO LEGAL IMAYNA RUWASQAN
+            </p>
+            <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
+              <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                Desarrollado con asistencia de Claude
+              </p>
+              <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
+                claude.ai · Anthropic
+              </p>
+            </div>
+          </div>
+
           </div>
         )}
       </main>
