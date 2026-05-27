@@ -152,11 +152,8 @@ export default function Dashboard() {
         esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     } else if (cat.key === 'PENDIENTE') {
-      acc[cat.key] = contratos.filter(c =>
-        c._estado === 'PENDIENTE' &&
-        (lapsoModificado ? matchFecha(c, COL_FECHA['PENDIENTE']) : true) &&
-        matchLugar(c)
-      ).length
+      // Total pendientes: sin filtro de fecha, pero SÍ respeta región/ciudad si está activa
+      acc[cat.key] = contratos.filter(c => c._estado === 'PENDIENTE' && matchLugar(c)).length
     } else {
       acc[cat.key] = contratos.filter(c =>
         c._estado === cat.key &&
