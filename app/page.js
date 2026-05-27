@@ -128,16 +128,22 @@ export default function Dashboard() {
     return true
   }
 
-  // Conteos por categoría filtrados por el plazo activo (igual que la lista)
-  // CONTRATO_OBSERVADO no tiene fecha propia → siempre muestra total
+  // Helper: verifica si un contrato pertenece a la región/ciudad activa
+  function matchLugar(c) {
+    if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
+    if (regionActiva) return c._region === regionActiva
+    return true
+  }
+
+  // Conteos por categoría filtrados por plazo + región/ciudad activos
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
-        ESTADOS_EMITIDOS.includes(c._estado) && matchFecha(c, 'FECHA DE ENVÍO')
+        ESTADOS_EMITIDOS.includes(c._estado) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
-        c._estado === cat.key && matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO')
+        c._estado === cat.key && matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     }
     return acc
