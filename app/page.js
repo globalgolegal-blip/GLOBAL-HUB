@@ -429,7 +429,7 @@ export default function Dashboard() {
             </div>
 
             {/* Lista de contratos */}
-            <ContractList contratos={contratosFiltrados} categoriaActiva={categoriaActiva} />
+            <ContractList key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')} contratos={contratosFiltrados} />
 
           </div>
         )}
