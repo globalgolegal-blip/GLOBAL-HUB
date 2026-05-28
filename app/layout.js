@@ -1,4 +1,5 @@
 import './globals.css'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata = {
   title: 'GoTrack',
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-[#f0f4f8] min-h-screen">
         {children}
+        <Analytics />
       </body>
     </html>
   )
