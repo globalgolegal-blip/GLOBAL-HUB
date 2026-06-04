@@ -106,17 +106,24 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
         </div>
       </div>
 
-      {/* Bloque de solicitud — solo para PENDIENTE y SOLICITADO */}
-      {(estado === 'PENDIENTE' || estado === 'SOLICITADO') && (
+      {/* Bloque de solicitud — PENDIENTE, SOLICITADO y OBSERVADO */}
+      {(estado === 'PENDIENTE' || estado === 'SOLICITADO' || estado === 'OBSERVADO') && (
         <>
-          {/* Línea divisoria */}
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
-
-          {/* Fila: acción + contador */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-
-            {/* Botón o caja según estado */}
-            {estado === 'PENDIENTE' ? (
+            {estado === 'SOLICITADO' ? (
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '500',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                background: '#FFF0E6',
+                color: '#CC5500',
+                border: '0.5px solid #ff6600',
+              }}>
+                📋 Validación ya solicitada
+              </div>
+            ) : (
               <button
                 onClick={handleSolicitar}
                 disabled={enviando}
@@ -134,21 +141,7 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
               >
                 {enviando ? 'Enviando...' : 'Solicitar validación'}
               </button>
-            ) : (
-              <div style={{
-                fontSize: '11px',
-                fontWeight: '500',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                background: '#FFF0E6',
-                color: '#CC5500',
-                border: '0.5px solid #ff6600',
-              }}>
-                📋 Validación ya solicitada
-              </div>
             )}
-
-            {/* Contador de intentos */}
             {intentos > 0 && (
               <span style={{
                 fontSize: '10px',
