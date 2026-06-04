@@ -14,10 +14,10 @@ function fmt(val) {
 export default function ContractCard({ contrato, numero, onSolicitarValidacion }) {
   const [enviando, setEnviando] = useState(false)
 
-  const estado    = contrato._estado || 'INGRESADO'
-  const cfg       = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
+  const estado      = contrato._estado || 'INGRESADO'
+  const cfg         = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
   const esObservado = estado === 'CONTRATO_OBSERVADO'
-  const intentos  = extraerIntentos(contrato)
+  const intentos    = extraerIntentos(contrato)
 
   async function handleSolicitar() {
     if (enviando) return
@@ -43,15 +43,9 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0 }}>
           {numero != null && (
             <span style={{
-              flexShrink: 0,
-              width: '22px', height: '22px',
-              borderRadius: '50%',
-              background: '#1A2238',
-              color: 'white',
-              fontSize: '10px',
-              fontWeight: '500',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: '1px',
+              flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%',
+              background: '#1A2238', color: 'white', fontSize: '10px', fontWeight: '500',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '1px',
             }}>
               {numero}
             </span>
@@ -61,15 +55,9 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
           </div>
         </div>
         <span style={{
-          flexShrink: 0,
-          fontSize: '10px',
-          fontWeight: '500',
-          padding: '3px 8px',
-          borderRadius: '20px',
-          background: cfg.bgBadge,
-          color: cfg.colorText,
-          border: `0.5px solid ${cfg.borderBadge}`,
-          whiteSpace: 'nowrap',
+          flexShrink: 0, fontSize: '10px', fontWeight: '500', padding: '3px 8px',
+          borderRadius: '20px', background: cfg.bgBadge, color: cfg.colorText,
+          border: `0.5px solid ${cfg.borderBadge}`, whiteSpace: 'nowrap',
         }}>
           {cfg.labelCorto}
         </span>
@@ -106,20 +94,17 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
         </div>
       </div>
 
-      {/* Bloque de solicitud — PENDIENTE, SOLICITADO y OBSERVADO */}
-      {(estado === 'PENDIENTE' || estado === 'SOLICITADO' || estado === 'OBSERVADO') && (
+      {/* Bloque de solicitud — solo PENDIENTE y SOLICITADO */}
+      {(estado === 'PENDIENTE' || estado === 'SOLICITADO') && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+
             {estado === 'SOLICITADO' ? (
               <div style={{
-                fontSize: '11px',
-                fontWeight: '500',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                background: '#FFF0E6',
-                color: '#CC5500',
-                border: '0.5px solid #ff6600',
+                fontSize: '11px', fontWeight: '500', padding: '6px 14px',
+                borderRadius: '8px', background: '#FFF0E6',
+                color: '#CC5500', border: '0.5px solid #ff6600',
               }}>
                 📋 Validación ya solicitada
               </div>
@@ -128,31 +113,23 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
                 onClick={handleSolicitar}
                 disabled={enviando}
                 style={{
-                  fontSize: '11px',
-                  fontWeight: '500',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  background: enviando ? '#B4B2A9' : '#185FA5',
-                  color: 'white',
-                  border: 'none',
-                  cursor: enviando ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.15s',
+                  fontSize: '11px', fontWeight: '500', padding: '6px 14px',
+                  borderRadius: '8px', background: enviando ? '#B4B2A9' : '#185FA5',
+                  color: 'white', border: 'none',
+                  cursor: enviando ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
                 }}
               >
                 {enviando ? 'Enviando...' : 'Solicitar validación'}
               </button>
             )}
+
+            {/* Contador — aparece desde el primer intento */}
             {intentos > 0 && (
               <span style={{
-                fontSize: '10px',
-                fontWeight: '500',
-                padding: '3px 8px',
-                borderRadius: '20px',
-                background: '#FFF0E6',
-                color: '#CC5500',
-                border: '0.5px solid #ff6600',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
+                fontSize: '10px', fontWeight: '500', padding: '3px 8px',
+                borderRadius: '20px', background: '#FFF0E6',
+                color: '#CC5500', border: '0.5px solid #ff6600',
+                whiteSpace: 'nowrap', flexShrink: 0,
               }}>
                 {intentos} {intentos === 1 ? 'intento' : 'intentos'}
               </span>
