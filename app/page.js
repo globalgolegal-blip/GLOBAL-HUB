@@ -75,9 +75,7 @@ export default function Dashboard() {
   const [regionActiva, setRegionActiva]                 = useState(null)
   const [ciudadActiva, setCiudadActiva]                 = useState(null)
   const [busqueda, setBusqueda]                         = useState('')
-
-  // ▼ NUEVO — estado de error de solicitud
-  const [errorSolicitud, setErrorSolicitud] = useState(null)
+  const [errorSolicitud, setErrorSolicitud]             = useState(null)
 
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
 
@@ -108,27 +106,21 @@ export default function Dashboard() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
-  // ▼ NUEVO — función para solicitar validación desde la tarjeta
   const solicitarValidacion = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
-      const res = await fetch(SHEET_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: String(id) }),
-      })
+      const url = `${SHEET_URL}?accion=solicitar&id=${encodeURIComponent(id)}`
+      const res = await fetch(url)
       const data = await res.json()
       if (!data.ok) {
         setErrorSolicitud('No se pudo enviar la solicitud. Intenta nuevamente.')
         return
       }
-      // Recargar datos para reflejar el nuevo estado
       await cargarDatos()
     } catch (err) {
       setErrorSolicitud('Error de conexión: ' + err.message)
     }
   }, [cargarDatos])
-  // ▲ NUEVO
 
   const aplicarLapso = useCallback((lapso) => {
     const hoy  = new Date(); hoy.setHours(0,0,0,0)
@@ -169,7 +161,6 @@ export default function Dashboard() {
         esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     } else if (cat.key === 'PENDIENTE') {
-      // ▼ MODIFICADO — PENDIENTE incluye también los SOLICITADOS en el conteo
       acc[cat.key] = contratos.filter(c =>
         (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
       ).length
@@ -184,7 +175,6 @@ export default function Dashboard() {
   }, {})
 
   const contratosFiltrados = contratos.filter(c => {
-    // ▼ MODIFICADO — categoría PENDIENTE muestra también SOLICITADOS
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
     } else if (categoriaActiva === 'INGRESADO') {
@@ -275,14 +265,12 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ▼ NUEVO — banner de error de solicitud */}
         {errorSolicitud && (
           <div style={{ background: '#FAEEDA', border: '0.5px solid #BA7517', borderRadius: '12px', padding: '12px 16px', fontSize: '13px', color: '#BA7517', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{errorSolicitud}</span>
             <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
           </div>
         )}
-        {/* ▲ NUEVO */}
 
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
