@@ -162,7 +162,7 @@ export default function Dashboard() {
       ).length
     } else if (cat.key === 'PENDIENTE') {
       acc[cat.key] = contratos.filter(c =>
-        (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO' || c._estado === 'OBSERVADO') && matchLugar(c)
+      (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
       ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
