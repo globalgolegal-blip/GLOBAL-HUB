@@ -176,7 +176,7 @@ export default function Dashboard() {
 
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
-      if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO' && c._estado !== 'OBSERVADO') return false
+      if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
     } else if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
     } else {
