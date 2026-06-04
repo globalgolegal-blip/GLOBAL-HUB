@@ -162,7 +162,7 @@ export default function Dashboard() {
       ).length
     } else if (cat.key === 'PENDIENTE') {
       acc[cat.key] = contratos.filter(c =>
-        (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
+        (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO' || c._estado === 'OBSERVADO') && matchLugar(c)
       ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
@@ -176,7 +176,7 @@ export default function Dashboard() {
 
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
-      if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
+      if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO' && c._estado !== 'OBSERVADO') return false
     } else if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
     } else {
@@ -228,7 +228,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
-      {/* Header */}
       <header style={{ backgroundColor: '#1A2238' }} className="px-4 pt-6 pb-5">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div>
@@ -274,7 +273,6 @@ export default function Dashboard() {
 
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Tarjetas de categorías */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               {CATEGORIAS.map(cat => (
                 <button
@@ -285,9 +283,7 @@ export default function Dashboard() {
                     borderRadius: '12px',
                     padding: '12px 14px',
                     textAlign: 'left',
-                    border: categoriaActiva === cat.key
-                      ? '2px solid #1A2238'
-                      : '0.5px solid #D3D1C7',
+                    border: categoriaActiva === cat.key ? '2px solid #1A2238' : '0.5px solid #D3D1C7',
                     cursor: 'pointer',
                     transition: 'border 0.15s',
                   }}
@@ -302,9 +298,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Filtros */}
             <div style={{ background: 'white', borderRadius: '12px', padding: '12px 14px', border: '0.5px solid #D3D1C7' }}>
-              {/* Buscador */}
               <div style={{ position: 'relative', marginBottom: '12px' }}>
                 <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#888780' }}
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,15 +326,14 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Plazo */}
               <div style={{ marginBottom: '12px' }}>
                 <p style={{ fontSize: '11px', fontWeight: '500', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                   Plazo
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {[
-                    { id: 'hoy',           label: 'Hoy' },
-                    { id: 'ayer',          label: 'Ayer' },
+                    { id: 'hoy', label: 'Hoy' },
+                    { id: 'ayer', label: 'Ayer' },
                     { id: 'personalizado', label: 'Personalizado' },
                   ].map(({ id, label }) => (
                     <button key={id} onClick={() => aplicarLapso(id)}
@@ -368,7 +361,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Región / Ciudad */}
               <div>
                 <p style={{ fontSize: '11px', fontWeight: '500', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                   Región / Ciudad
@@ -414,7 +406,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Barra de contexto */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px' }}>
               <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A2238' }}>
                 {categoriaLabel}
@@ -428,14 +419,12 @@ export default function Dashboard() {
               </span>
             </div>
 
-            {/* Lista de contratos */}
             <ContractList
               key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')}
               contratos={contratosFiltrados}
               onSolicitarValidacion={solicitarValidacion}
             />
 
-            {/* Footer */}
             <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
               <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
                 POWERED BY LEGAL TEAM GO
