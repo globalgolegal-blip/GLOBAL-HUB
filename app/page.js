@@ -39,7 +39,6 @@ function fechaAyerStr() {
   return fmtDate(a)
 }
 
-// Antes de las 12pm: "ayer" (reporte matutino). Desde las 12pm: "hoy"
 function getLapsoDefault() {
   return new Date().getHours() < 12 ? 'ayer' : 'hoy'
 }
@@ -69,7 +68,7 @@ export default function Dashboard() {
 
   const [categoriaActiva, setCategoriaActiva]           = useState('PENDIENTE')
   const [lapsoActivo, setLapsoActivo]                   = useState(getLapsoDefault)
-  const [lapsoModificado, setLapsoModificado]           = useState(false)   // true cuando el usuario elige un plazo manualmente
+  const [lapsoModificado, setLapsoModificado]           = useState(false)
   const [fechaDesde, setFechaDesde]                     = useState(getFechaDefault)
   const [fechaHasta, setFechaHasta]                     = useState(getFechaDefault)
   const [mostrarPersonalizado, setMostrarPersonalizado] = useState(false)
@@ -77,16 +76,8 @@ export default function Dashboard() {
   const [ciudadActiva, setCiudadActiva]                 = useState(null)
   const [busqueda, setBusqueda]                         = useState('')
 
-  const aplicarLapso = useCallback((lapso) => {
-    const hoy  = new Date(); hoy.setHours(0,0,0,0)
-    const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
-    if (lapso === 'hoy')           { setFechaDesde(fmtDate(hoy));  setFechaHasta(fmtDate(hoy)) }
-    if (lapso === 'ayer')          { setFechaDesde(fmtDate(ayer)); setFechaHasta(fmtDate(ayer)) }
-    if (lapso === 'personalizado') { setFechaDesde(''); setFechaHasta('') }
-    setLapsoActivo(lapso)
-    setLapsoModificado(true)   // el usuario eligió explícitamente un plazo
-    setMostrarPersonalizado(lapso === 'personalizado')
-  }, [])
+  // ▼ NUEVO — estado de error de solicitud
+  const [errorSolicitud, setErrorSolicitud] = useState(null)
 
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
 
@@ -117,12 +108,43 @@ export default function Dashboard() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
-  // Un contrato está "emitido" si tiene FECHA DE ENVÍO con valor (independiente del estado de firma)
+  // ▼ NUEVO — función para solicitar validación desde la tarjeta
+  const solicitarValidacion = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const res = await fetch(SHEET_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: String(id) }),
+      })
+      const data = await res.json()
+      if (!data.ok) {
+        setErrorSolicitud('No se pudo enviar la solicitud. Intenta nuevamente.')
+        return
+      }
+      // Recargar datos para reflejar el nuevo estado
+      await cargarDatos()
+    } catch (err) {
+      setErrorSolicitud('Error de conexión: ' + err.message)
+    }
+  }, [cargarDatos])
+  // ▲ NUEVO
+
+  const aplicarLapso = useCallback((lapso) => {
+    const hoy  = new Date(); hoy.setHours(0,0,0,0)
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
+    if (lapso === 'hoy')           { setFechaDesde(fmtDate(hoy));  setFechaHasta(fmtDate(hoy)) }
+    if (lapso === 'ayer')          { setFechaDesde(fmtDate(ayer)); setFechaHasta(fmtDate(ayer)) }
+    if (lapso === 'personalizado') { setFechaDesde(''); setFechaHasta('') }
+    setLapsoActivo(lapso)
+    setLapsoModificado(true)
+    setMostrarPersonalizado(lapso === 'personalizado')
+  }, [])
+
   function esEmitido(c) {
     return !!normalizarFecha(getFechaEnvio(c)) && c._estado !== 'CONTRATO_OBSERVADO'
   }
 
-  // Verifica si un contrato cae en el rango de fechas activo
   function matchFecha(c, colFecha) {
     if (!fechaDesde && !fechaHasta) return true
     const rawVal = (colFecha === 'FECHA DE ENVÍO' || colFecha === 'FECHA DE ENVIO')
@@ -135,25 +157,22 @@ export default function Dashboard() {
     return true
   }
 
-  // Verifica si un contrato pertenece a la región/ciudad activa
   function matchLugar(c) {
     if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
     if (regionActiva) return c._region === regionActiva
     return true
   }
 
-  // Conteos por categoría:
-  //   PENDIENTE  → al cargar: total (sin filtro de fecha). Al elegir plazo: filtra por fecha de envío.
-  //   INGRESADO  → siempre filtra por plazo activo (ayer antes de 12pm, hoy después).
-  //   El resto   → filtra por su columna de fecha correspondiente.
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
         esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     } else if (cat.key === 'PENDIENTE') {
-      // Total pendientes: sin filtro de fecha, pero SÍ respeta región/ciudad si está activa
-      acc[cat.key] = contratos.filter(c => c._estado === 'PENDIENTE' && matchLugar(c)).length
+      // ▼ MODIFICADO — PENDIENTE incluye también los SOLICITADOS en el conteo
+      acc[cat.key] = contratos.filter(c =>
+        (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
+      ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
         c._estado === cat.key &&
@@ -164,17 +183,16 @@ export default function Dashboard() {
     return acc
   }, {})
 
-  // Lista de contratos filtrada
   const contratosFiltrados = contratos.filter(c => {
-    // 1. Filtro por categoría
-    if (categoriaActiva === 'INGRESADO') {
+    // ▼ MODIFICADO — categoría PENDIENTE muestra también SOLICITADOS
+    if (categoriaActiva === 'PENDIENTE') {
+      if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
+    } else if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
 
-    // 2. Filtro por fecha
-    //    PENDIENTE: solo aplica si el usuario eligió un plazo manualmente
     const aplicarPlazo = categoriaActiva === 'PENDIENTE' ? lapsoModificado : true
     if (aplicarPlazo && (fechaDesde || fechaHasta)) {
       const colFecha = categoriaActiva === 'INGRESADO'
@@ -183,14 +201,12 @@ export default function Dashboard() {
       if (!matchFecha(c, colFecha)) return false
     }
 
-    // 3. Filtro por región/ciudad
     if (ciudadActiva) {
       if ((c['CIUDAD'] || '').toUpperCase() !== ciudadActiva.toUpperCase()) return false
     } else if (regionActiva) {
       if (c._region !== regionActiva) return false
     }
 
-    // 4. Búsqueda
     if (busqueda.trim()) {
       const q      = busqueda.trim().toLowerCase()
       const nombre = (c['CLIENTE'] || '').toLowerCase()
@@ -217,13 +233,11 @@ export default function Dashboard() {
                        ? `DESDE ${fechaDesde.split('-').reverse().join('/')}`
                        : ''
 
-  // Para PENDIENTE sin filtro activo, mostramos "TOTAL"
   const plazoEfectivo = (categoriaActiva === 'PENDIENTE' && !lapsoModificado) ? 'TOTAL' : plazoLabel
   const regionLabel   = ciudadActiva || regionActiva || 'TODAS'
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
-
       {/* Header */}
       <header style={{ backgroundColor: '#1A2238' }} className="px-4 pt-6 pb-5">
         <div className="max-w-lg mx-auto flex items-center justify-between">
@@ -243,7 +257,6 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-lg mx-auto pb-10" style={{ padding: '12px 12px 40px' }}>
-
         {cargando && (
           <div className="text-center py-16">
             <div className="inline-block w-8 h-8 rounded-full animate-spin mb-3"
@@ -262,13 +275,18 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ▼ NUEVO — banner de error de solicitud */}
+        {errorSolicitud && (
+          <div style={{ background: '#FAEEDA', border: '0.5px solid #BA7517', borderRadius: '12px', padding: '12px 16px', fontSize: '13px', color: '#BA7517', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{errorSolicitud}</span>
+            <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+          </div>
+        )}
+        {/* ▲ NUEVO */}
+
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-            {/* Meta mensual — oculto */}
-            {/* {meta && <MetaCard meta={meta} totalValidados={totalValidados} />} */}
-
-            {/* Tarjetas de categorías — 2 columnas */}
+            {/* Tarjetas de categorías */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               {CATEGORIAS.map(cat => (
                 <button
@@ -298,7 +316,6 @@ export default function Dashboard() {
 
             {/* Filtros */}
             <div style={{ background: 'white', borderRadius: '12px', padding: '12px 14px', border: '0.5px solid #D3D1C7' }}>
-
               {/* Buscador */}
               <div style={{ position: 'relative', marginBottom: '12px' }}>
                 <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#888780' }}
@@ -389,8 +406,6 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-
-                {/* Ciudades de la región seleccionada */}
                 {ciudadesRegion.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
                     {ciudadesRegion.map(ciudad => (
@@ -411,7 +426,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Barra de contexto: categoría activa · plazo · región */}
+            {/* Barra de contexto */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px' }}>
               <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A2238' }}>
                 {categoriaLabel}
@@ -426,32 +441,36 @@ export default function Dashboard() {
             </div>
 
             {/* Lista de contratos */}
-            <ContractList key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')} contratos={contratosFiltrados} />
+            <ContractList
+              key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')}
+              contratos={contratosFiltrados}
+              onSolicitarValidacion={solicitarValidacion}
+            />
 
-          {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
-            <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
-              POWERED BY LEGAL TEAM GO
-            </p>
-            <p style={{ fontSize: '10px', color: '#5F5E5A', letterSpacing: '0.06em', marginBottom: '4px' }}>
-              IMPULSADO POR EL EQUIPO LEGAL DE GO
-            </p>
-            <p style={{ fontSize: '10px', color: '#888780', letterSpacing: '0.06em', marginBottom: '16px' }}>
-              GO EQUIPO LEGAL IMAYNA RUWASQAN
-            </p>
-            <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
-              <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
-                Desarrollado con asistencia de Claude
+            {/* Footer */}
+            <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
+              <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
+                POWERED BY LEGAL TEAM GO
               </p>
-              <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
-                claude.ai · Anthropic
+              <p style={{ fontSize: '10px', color: '#5F5E5A', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                IMPULSADO POR EL EQUIPO LEGAL DE GO
               </p>
+              <p style={{ fontSize: '10px', color: '#888780', letterSpacing: '0.06em', marginBottom: '16px' }}>
+                GO EQUIPO LEGAL IMAYNA RUWASQAN
+              </p>
+              <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
+                <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                  Desarrollado con asistencia de Claude
+                </p>
+                <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
+                  claude.ai · Anthropic
+                </p>
+              </div>
             </div>
-          </div>
-
           </div>
         )}
       </main>
     </div>
   )
+}
 }
