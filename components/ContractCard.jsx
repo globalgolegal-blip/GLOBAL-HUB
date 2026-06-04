@@ -1,5 +1,6 @@
 'use client'
-import { ESTADO_CONFIG } from '../lib/utils'
+import { useState } from 'react'
+import { ESTADO_CONFIG, extraerIntentos } from '../lib/utils'
 
 function fmt(val) {
   if (!val) return '—'
@@ -10,17 +11,29 @@ function fmt(val) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
 }
 
-export default function ContractCard({ contrato, numero }) {
-  const estado = contrato._estado || 'INGRESADO'
-  const cfg    = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
+export default function ContractCard({ contrato, numero, onSolicitarValidacion }) {
+  const [enviando, setEnviando] = useState(false)
+
+  const estado    = contrato._estado || 'INGRESADO'
+  const cfg       = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
   const esObservado = estado === 'CONTRATO_OBSERVADO'
+  const intentos  = extraerIntentos(contrato)
+
+  async function handleSolicitar() {
+    if (enviando) return
+    setEnviando(true)
+    try {
+      await onSolicitarValidacion(contrato['ID'])
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   return (
     <div style={{
       background: 'white',
       borderRadius: '12px',
-      borderLeft: `4px solid ${cfg.borderCard}`,
-      border: `0.5px solid #D3D1C7`,
+      border: '0.5px solid #D3D1C7',
       borderLeftWidth: '4px',
       borderLeftColor: cfg.borderCard,
       padding: '12px 14px',
@@ -83,15 +96,77 @@ export default function ContractCard({ contrato, numero }) {
         <div style={{ fontSize: '11px' }}></div>
         <div style={{ fontSize: '11px' }}>
           <span style={{ color: '#5F5E5A', fontWeight: '500' }}>Enviado: </span>
-          <span style={{ color: '#444441' }}>{esObservado ? 'OBSERVADO' : fmt(contrato['FECHA DE ENVÍO'])}</span>
+          <span style={{ color: '#444441' }}>{esObservado ? 'OBSERVADO' : fmt(contrato['FECHA DE ENVÍO'] || contrato['FECHA DE ENVIO'])}</span>
         </div>
         <div style={{ fontSize: '11px' }}>
           <span style={{ color: estado === 'VENCIDO' ? '#A32D2D' : '#5F5E5A', fontWeight: '500' }}>Vence: </span>
           <span style={{ color: estado === 'VENCIDO' ? '#A32D2D' : '#444441', fontWeight: estado === 'VENCIDO' ? '500' : '400' }}>
-            {esObservado ? 'OBSERVADO' : fmt(contrato['FECHA DE VENCIMIENTO'])}
+            {esObservado ? '—' : fmt(contrato['FECHA DE VENCIMIENTO'])}
           </span>
         </div>
       </div>
+
+      {/* Bloque de solicitud — solo para PENDIENTE y SOLICITADO */}
+      {(estado === 'PENDIENTE' || estado === 'SOLICITADO') && (
+        <>
+          {/* Línea divisoria */}
+          <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
+
+          {/* Fila: acción + contador */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+
+            {/* Botón o caja según estado */}
+            {estado === 'PENDIENTE' ? (
+              <button
+                onClick={handleSolicitar}
+                disabled={enviando}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  background: enviando ? '#B4B2A9' : '#185FA5',
+                  color: 'white',
+                  border: 'none',
+                  cursor: enviando ? 'not-allowed' : 'pointer',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {enviando ? 'Enviando...' : 'Solicitar validación'}
+              </button>
+            ) : (
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '500',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                background: '#FFF0E6',
+                color: '#CC5500',
+                border: '0.5px solid #ff6600',
+              }}>
+                📋 Validación ya solicitada
+              </div>
+            )}
+
+            {/* Contador de intentos */}
+            {intentos > 0 && (
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '500',
+                padding: '3px 8px',
+                borderRadius: '20px',
+                background: '#FFF0E6',
+                color: '#CC5500',
+                border: '0.5px solid #ff6600',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}>
+                {intentos} {intentos === 1 ? 'intento' : 'intentos'}
+              </span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
