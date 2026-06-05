@@ -5,7 +5,6 @@ import ContractList from '../components/ContractList'
 import { parsearSheet } from '../lib/parseSheets'
 import { derivarEstado, hoyISO, ESTADO_CONFIG } from '../lib/utils'
 import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../lib/regions'
-
 const CATEGORIAS = [
   { key: 'PENDIENTE',          label: 'Contratos por firmar',  color: '#185FA5' },
   { key: 'INGRESADO',          label: 'Contratos emitidos',    color: '#534AB7' },
@@ -14,18 +13,16 @@ const CATEGORIAS = [
   { key: 'OBSERVADO',          label: 'Firmas observadas',     color: '#D85A30' },
   { key: 'VENCIDO',            label: 'Contratos vencidos',    color: '#A32D2D' },
 ]
-
 const COL_FECHA = {
-  PENDIENTE:          'FECHA DE ENVÍO',
-  INGRESADO:          'FECHA DE ENVÍO',
-  CONTRATO_OBSERVADO: 'FECHA DE ENVÍO',
+  PENDIENTE:          'FECHA DE ENVIO',
+  INGRESADO:          'FECHA DE ENVIO',
+  CONTRATO_OBSERVADO: 'FECHA DE ENVIO',
   VALIDADO:           'FECHA DE VALIDACION',
   OBSERVADO:          'FECHA DE OBSERVACION',
   VENCIDO:            'FECHA DE VENCIMIENTO',
 }
-
 function getFechaEnvio(c) {
-  return c['FECHA DE ENVÍO'] || c['FECHA DE ENVIO'] || ''
+  return c['FECHA DE ENVIO'] || ''
 }
 function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -52,7 +49,6 @@ function normalizarFecha(val) {
   if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
   return ''
 }
-
 export default function Dashboard() {
   const [cargando, setCargando]   = useState(true)
   const [error, setError]         = useState(null)
@@ -69,9 +65,7 @@ export default function Dashboard() {
   const [ciudadActiva, setCiudadActiva]                 = useState(null)
   const [busqueda, setBusqueda]                         = useState('')
   const [errorSolicitud, setErrorSolicitud]             = useState(null)
-
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
-
   const cargarDatos = useCallback(async () => {
     setCargando(true)
     setError(null)
@@ -96,9 +90,7 @@ export default function Dashboard() {
       setCargando(false)
     }
   }, [])
-
   useEffect(() => { cargarDatos() }, [cargarDatos])
-
   const solicitarValidacion = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -111,10 +103,9 @@ export default function Dashboard() {
       }
       await cargarDatos()
     } catch (err) {
-      setErrorSolicitud('Error de conexión: ' + err.message)
+      setErrorSolicitud('Error de conexion: ' + err.message)
     }
   }, [cargarDatos])
-
   const aplicarLapso = useCallback((lapso) => {
     const hoy  = new Date(); hoy.setHours(0,0,0,0)
     const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
@@ -125,33 +116,27 @@ export default function Dashboard() {
     setLapsoModificado(true)
     setMostrarPersonalizado(lapso === 'personalizado')
   }, [])
-
   function esEmitido(c) {
     return !!normalizarFecha(getFechaEnvio(c)) && c._estado !== 'CONTRATO_OBSERVADO'
   }
-
   function matchFecha(c, colFecha) {
     if (!fechaDesde && !fechaHasta) return true
-    const rawVal = (colFecha === 'FECHA DE ENVÍO' || colFecha === 'FECHA DE ENVIO')
-      ? getFechaEnvio(c)
-      : (c[colFecha] || '')
+    const rawVal = getFechaEnvio(c) || (c[colFecha] || '')
     const fechaISO = normalizarFecha(rawVal)
     if (!fechaISO) return false
     if (fechaDesde && fechaISO < fechaDesde) return false
     if (fechaHasta && fechaISO > fechaHasta) return false
     return true
   }
-
   function matchLugar(c) {
     if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
     if (regionActiva) return c._region === regionActiva
     return true
   }
-
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
-        esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
+        esEmitido(c) && matchFecha(c, 'FECHA DE ENVIO') && matchLugar(c)
       ).length
     } else if (cat.key === 'PENDIENTE') {
       acc[cat.key] = contratos.filter(c =>
@@ -160,30 +145,27 @@ export default function Dashboard() {
     } else {
       acc[cat.key] = contratos.filter(c =>
         c._estado === cat.key &&
-        matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') &&
+        matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVIO') &&
         matchLugar(c)
       ).length
     }
     return acc
   }, {})
-
-  // PENDIENTE: nunca filtra por fecha, solo por región/ciudad
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
       if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
       if (regionActiva) return c._region === regionActiva
       return true
-    }
-    if (categoriaActiva === 'INGRESADO') {
+    } else if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
     if (fechaDesde || fechaHasta) {
       const colFecha = categoriaActiva === 'INGRESADO'
-        ? 'FECHA DE ENVÍO'
-        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
+        ? 'FECHA DE ENVIO'
+        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVIO')
       if (!matchFecha(c, colFecha)) return false
     }
     if (ciudadActiva) {
@@ -199,26 +181,21 @@ export default function Dashboard() {
     }
     return true
   })
-
   const horaAct = ultimaAct
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : null
-
   const totalValidados  = contratos.filter(c => c._estado === 'VALIDADO').length
   const ciudadesRegion  = regionActiva ? ciudadesDeRegion(regionActiva) : []
   const categoriaLabel  = CATEGORIAS.find(c => c.key === categoriaActiva)?.label || ''
-
   const plazoLabel = lapsoActivo === 'hoy'  ? 'HOY'
                    : lapsoActivo === 'ayer' ? 'AYER'
                    : (fechaDesde && fechaHasta)
-                       ? `${fechaDesde.split('-').reverse().join('/')} – ${fechaHasta.split('-').reverse().join('/')}`
+                       ? `${fechaDesde.split('-').reverse().join('/')} - ${fechaHasta.split('-').reverse().join('/')}`
                    : fechaDesde
                        ? `DESDE ${fechaDesde.split('-').reverse().join('/')}`
                        : ''
-
-  const plazoEfectivo = (categoriaActiva === 'PENDIENTE') ? 'TOTAL' : plazoLabel
+  const plazoEfectivo = categoriaActiva === 'PENDIENTE' ? 'TOTAL' : plazoLabel
   const regionLabel   = ciudadActiva || regionActiva || 'TODAS'
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
       <header style={{ backgroundColor: '#1A2238' }} className="px-4 pt-6 pb-5">
@@ -226,7 +203,7 @@ export default function Dashboard() {
           <div>
             <h1 style={{ fontSize: '18px', fontWeight: '500', color: 'white' }}>GoTrack</h1>
             <p style={{ fontSize: '12px', color: '#9BB4D8' }}>
-              Seguimiento de contratos{horaAct ? ` · ${horaAct}` : ''}
+              Seguimiento de contratos{horaAct ? ` - ${horaAct}` : ''}
             </p>
           </div>
           <button onClick={cargarDatos} style={{ color: '#9BB4D8', padding: '4px' }}>
@@ -237,7 +214,6 @@ export default function Dashboard() {
           </button>
         </div>
       </header>
-
       <main className="max-w-lg mx-auto pb-10" style={{ padding: '12px 12px 40px' }}>
         {cargando && (
           <div className="text-center py-16">
@@ -258,7 +234,7 @@ export default function Dashboard() {
         {errorSolicitud && (
           <div style={{ background: '#FAEEDA', border: '0.5px solid #BA7517', borderRadius: '12px', padding: '12px 16px', fontSize: '13px', color: '#BA7517', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{errorSolicitud}</span>
-            <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+            <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>x</button>
           </div>
         )}
         {!cargando && !error && (
@@ -287,7 +263,6 @@ export default function Dashboard() {
                 </button>
               ))}
             </div>
-
             <div style={{ background: 'white', borderRadius: '12px', padding: '12px 14px', border: '0.5px solid #D3D1C7' }}>
               <div style={{ position: 'relative', marginBottom: '12px' }}>
                 <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#888780' }}
@@ -298,7 +273,7 @@ export default function Dashboard() {
                   type="text"
                   value={busqueda}
                   onChange={e => setBusqueda(e.target.value)}
-                  placeholder="Buscar por nombre o DOI…"
+                  placeholder="Buscar por nombre o DOI..."
                   style={{
                     width: '100%', boxSizing: 'border-box',
                     paddingLeft: '32px', paddingRight: busqueda ? '32px' : '12px',
@@ -311,11 +286,10 @@ export default function Dashboard() {
                 {busqueda && (
                   <button onClick={() => setBusqueda('')}
                     style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#888780', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    ✕
+                    x
                   </button>
                 )}
               </div>
-
               <div style={{ marginBottom: '12px' }}>
                 <p style={{ fontSize: '11px', fontWeight: '500', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                   Plazo
@@ -343,17 +317,16 @@ export default function Dashboard() {
                     <input type="date" value={fechaDesde} max={fechaHasta || hoyISO()}
                       onChange={e => setFechaDesde(e.target.value)}
                       style={{ flex: 1, fontSize: '11px', border: '0.5px solid #D3D1C7', borderRadius: '8px', padding: '6px 8px', outline: 'none' }} />
-                    <span style={{ color: '#888780', fontSize: '12px' }}>–</span>
+                    <span style={{ color: '#888780', fontSize: '12px' }}>-</span>
                     <input type="date" value={fechaHasta} min={fechaDesde} max={hoyISO()}
                       onChange={e => setFechaHasta(e.target.value)}
                       style={{ flex: 1, fontSize: '11px', border: '0.5px solid #D3D1C7', borderRadius: '8px', padding: '6px 8px', outline: 'none' }} />
                   </div>
                 )}
               </div>
-
               <div>
                 <p style={{ fontSize: '11px', fontWeight: '500', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                  Región / Ciudad
+                  Region / Ciudad
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {[
@@ -395,26 +368,23 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px' }}>
               <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A2238' }}>
                 {categoriaLabel}
-                <span style={{ fontWeight: '400', color: '#888780' }}> · {plazoEfectivo}</span>
+                <span style={{ fontWeight: '400', color: '#888780' }}> - {plazoEfectivo}</span>
                 {regionLabel !== 'TODAS' && (
-                  <span style={{ fontWeight: '400', color: '#888780' }}> · {regionLabel}</span>
+                  <span style={{ fontWeight: '400', color: '#888780' }}> - {regionLabel}</span>
                 )}
               </span>
               <span style={{ fontSize: '12px', color: '#888780' }}>
                 {contratosFiltrados.length} contrato{contratosFiltrados.length !== 1 ? 's' : ''}
               </span>
             </div>
-
             <ContractList
               key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')}
               contratos={contratosFiltrados}
               onSolicitarValidacion={solicitarValidacion}
             />
-
             <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
               <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
                 POWERED BY LEGAL TEAM GO
@@ -430,7 +400,7 @@ export default function Dashboard() {
                   Desarrollado con asistencia de Claude
                 </p>
                 <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
-                  claude.ai · Anthropic
+                  claude.ai - Anthropic
                 </p>
               </div>
             </div>
