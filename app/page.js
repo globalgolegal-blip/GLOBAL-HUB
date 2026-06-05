@@ -14,15 +14,15 @@ const CATEGORIAS = [
   { key: 'VENCIDO',            label: 'Contratos vencidos',    color: '#A32D2D' },
 ]
 const COL_FECHA = {
-  PENDIENTE:          'FECHA DE ENVIO',
-  INGRESADO:          'FECHA DE ENVIO',
-  CONTRATO_OBSERVADO: 'FECHA DE ENVIO',
+  PENDIENTE:          'FECHA DE ENVÍO',
+  INGRESADO:          'FECHA DE ENVÍO',
+  CONTRATO_OBSERVADO: 'FECHA DE ENVÍO',
   VALIDADO:           'FECHA DE VALIDACION',
   OBSERVADO:          'FECHA DE OBSERVACION',
   VENCIDO:            'FECHA DE VENCIMIENTO',
 }
 function getFechaEnvio(c) {
-  return c['FECHA DE ENVIO'] || ''
+  return c['FECHA DE ENVÍO'] || c['FECHA DE ENVIO'] || ''
 }
 function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -103,7 +103,7 @@ export default function Dashboard() {
       }
       await cargarDatos()
     } catch (err) {
-      setErrorSolicitud('Error de conexion: ' + err.message)
+      setErrorSolicitud('Error de conexión: ' + err.message)
     }
   }, [cargarDatos])
   const aplicarLapso = useCallback((lapso) => {
@@ -121,7 +121,9 @@ export default function Dashboard() {
   }
   function matchFecha(c, colFecha) {
     if (!fechaDesde && !fechaHasta) return true
-    const rawVal = getFechaEnvio(c) || (c[colFecha] || '')
+    const rawVal = (colFecha === 'FECHA DE ENVÍO' || colFecha === 'FECHA DE ENVIO')
+      ? getFechaEnvio(c)
+      : (c[colFecha] || '')
     const fechaISO = normalizarFecha(rawVal)
     if (!fechaISO) return false
     if (fechaDesde && fechaISO < fechaDesde) return false
@@ -136,7 +138,7 @@ export default function Dashboard() {
   const counts = CATEGORIAS.reduce((acc, cat) => {
     if (cat.key === 'INGRESADO') {
       acc[cat.key] = contratos.filter(c =>
-        esEmitido(c) && matchFecha(c, 'FECHA DE ENVIO') && matchLugar(c)
+        esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
       ).length
     } else if (cat.key === 'PENDIENTE') {
       acc[cat.key] = contratos.filter(c =>
@@ -145,7 +147,7 @@ export default function Dashboard() {
     } else {
       acc[cat.key] = contratos.filter(c =>
         c._estado === cat.key &&
-        matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVIO') &&
+        matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') &&
         matchLugar(c)
       ).length
     }
@@ -154,18 +156,24 @@ export default function Dashboard() {
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
-      if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
-      if (regionActiva) return c._region === regionActiva
+      if (ciudadActiva && (c['CIUDAD'] || '').toUpperCase() !== ciudadActiva.toUpperCase()) return false
+      if (regionActiva && c._region !== regionActiva) return false
+      if (busqueda.trim()) {
+        const q      = busqueda.trim().toLowerCase()
+        const nombre = (c['CLIENTE'] || '').toLowerCase()
+        const doi    = String(c['DOI'] || '').toLowerCase()
+        if (!nombre.includes(q) && !doi.includes(q)) return false
+      }
       return true
     } else if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
-    if (fechaDesde || fechaHasta) {
+    if (categoriaActiva !== 'PENDIENTE' && (fechaDesde || fechaHasta)) {
       const colFecha = categoriaActiva === 'INGRESADO'
-        ? 'FECHA DE ENVIO'
-        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVIO')
+        ? 'FECHA DE ENVÍO'
+        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
       if (!matchFecha(c, colFecha)) return false
     }
     if (ciudadActiva) {
@@ -190,7 +198,7 @@ export default function Dashboard() {
   const plazoLabel = lapsoActivo === 'hoy'  ? 'HOY'
                    : lapsoActivo === 'ayer' ? 'AYER'
                    : (fechaDesde && fechaHasta)
-                       ? `${fechaDesde.split('-').reverse().join('/')} - ${fechaHasta.split('-').reverse().join('/')}`
+                       ? `${fechaDesde.split('-').reverse().join('/')} – ${fechaHasta.split('-').reverse().join('/')}`
                    : fechaDesde
                        ? `DESDE ${fechaDesde.split('-').reverse().join('/')}`
                        : ''
@@ -203,7 +211,7 @@ export default function Dashboard() {
           <div>
             <h1 style={{ fontSize: '18px', fontWeight: '500', color: 'white' }}>GoTrack</h1>
             <p style={{ fontSize: '12px', color: '#9BB4D8' }}>
-              Seguimiento de contratos{horaAct ? ` - ${horaAct}` : ''}
+              {`Seguimiento de contratos${horaAct ? ' · ' + horaAct : ''}`}
             </p>
           </div>
           <button onClick={cargarDatos} style={{ color: '#9BB4D8', padding: '4px' }}>
@@ -234,7 +242,7 @@ export default function Dashboard() {
         {errorSolicitud && (
           <div style={{ background: '#FAEEDA', border: '0.5px solid #BA7517', borderRadius: '12px', padding: '12px 16px', fontSize: '13px', color: '#BA7517', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{errorSolicitud}</span>
-            <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>x</button>
+            <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>&#x2715;</button>
           </div>
         )}
         {!cargando && !error && (
@@ -286,7 +294,7 @@ export default function Dashboard() {
                 {busqueda && (
                   <button onClick={() => setBusqueda('')}
                     style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#888780', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    x
+                    &#x2715;
                   </button>
                 )}
               </div>
@@ -317,7 +325,7 @@ export default function Dashboard() {
                     <input type="date" value={fechaDesde} max={fechaHasta || hoyISO()}
                       onChange={e => setFechaDesde(e.target.value)}
                       style={{ flex: 1, fontSize: '11px', border: '0.5px solid #D3D1C7', borderRadius: '8px', padding: '6px 8px', outline: 'none' }} />
-                    <span style={{ color: '#888780', fontSize: '12px' }}>-</span>
+                    <span style={{ color: '#888780', fontSize: '12px' }}>&#x2013;</span>
                     <input type="date" value={fechaHasta} min={fechaDesde} max={hoyISO()}
                       onChange={e => setFechaHasta(e.target.value)}
                       style={{ flex: 1, fontSize: '11px', border: '0.5px solid #D3D1C7', borderRadius: '8px', padding: '6px 8px', outline: 'none' }} />
@@ -326,7 +334,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p style={{ fontSize: '11px', fontWeight: '500', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                  Region / Ciudad
+                  {`Región / Ciudad`}
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {[
@@ -371,13 +379,13 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 2px' }}>
               <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A2238' }}>
                 {categoriaLabel}
-                <span style={{ fontWeight: '400', color: '#888780' }}> - {plazoEfectivo}</span>
+                <span style={{ fontWeight: '400', color: '#888780' }}>{` · ${plazoEfectivo}`}</span>
                 {regionLabel !== 'TODAS' && (
-                  <span style={{ fontWeight: '400', color: '#888780' }}> - {regionLabel}</span>
+                  <span style={{ fontWeight: '400', color: '#888780' }}>{` · ${regionLabel}`}</span>
                 )}
               </span>
               <span style={{ fontSize: '12px', color: '#888780' }}>
-                {contratosFiltrados.length} contrato{contratosFiltrados.length !== 1 ? 's' : ''}
+                {contratosFiltrados.length}{` contrato${contratosFiltrados.length !== 1 ? 's' : ''}`}
               </span>
             </div>
             <ContractList
@@ -400,7 +408,7 @@ export default function Dashboard() {
                   Desarrollado con asistencia de Claude
                 </p>
                 <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
-                  claude.ai - Anthropic
+                  claude.ai · Anthropic
                 </p>
               </div>
             </div>
