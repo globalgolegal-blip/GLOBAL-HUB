@@ -183,7 +183,7 @@ export default function Dashboard() {
       if (c._estado !== categoriaActiva) return false
     }
 
-    const aplicarPlazo = categoriaActiva === 'PENDIENTE'
+    const aplicarPlazo = categoriaActiva !== 'PENDIENTE'
     if (aplicarPlazo && (fechaDesde || fechaHasta)) {
       const colFecha = categoriaActiva === 'INGRESADO'
         ? 'FECHA DE ENVÍO'
