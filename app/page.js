@@ -177,11 +177,34 @@ export default function Dashboard() {
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
-    } else if (categoriaActiva === 'INGRESADO') {
+      if (ciudadActiva) return (c['CIUDAD'] || '').toUpperCase() === ciudadActiva.toUpperCase()
+      if (regionActiva) return c._region === regionActiva
+      return true
+    }
+    if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
     } else {
       if (c._estado !== categoriaActiva) return false
     }
+    if (fechaDesde || fechaHasta) {
+      const colFecha = categoriaActiva === 'INGRESADO'
+        ? 'FECHA DE ENVÍO'
+        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
+      if (!matchFecha(c, colFecha)) return false
+    }
+    if (ciudadActiva) {
+      if ((c['CIUDAD'] || '').toUpperCase() !== ciudadActiva.toUpperCase()) return false
+    } else if (regionActiva) {
+      if (c._region !== regionActiva) return false
+    }
+    if (busqueda.trim()) {
+      const q      = busqueda.trim().toLowerCase()
+      const nombre = (c['CLIENTE'] || '').toLowerCase()
+      const doi    = String(c['DOI'] || '').toLowerCase()
+      if (!nombre.includes(q) && !doi.includes(q)) return false
+    }
+    return true
+  })
 
     const aplicarPlazo = categoriaActiva !== 'PENDIENTE'
     if (aplicarPlazo && (fechaDesde || fechaHasta)) {
