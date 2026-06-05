@@ -27,26 +27,20 @@ const COL_FECHA = {
 function getFechaEnvio(c) {
   return c['FECHA DE ENVÍO'] || c['FECHA DE ENVIO'] || ''
 }
-
 function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
-
 function fechaHoyStr() { return fmtDate(new Date()) }
-
 function fechaAyerStr() {
   const a = new Date(); a.setDate(a.getDate() - 1)
   return fmtDate(a)
 }
-
 function getLapsoDefault() {
   return new Date().getHours() < 12 ? 'ayer' : 'hoy'
 }
-
 function getFechaDefault() {
   return getLapsoDefault() === 'ayer' ? fechaAyerStr() : fechaHoyStr()
 }
-
 function normalizarFecha(val) {
   const s = String(val || '').trim()
   if (!s) return ''
@@ -65,7 +59,6 @@ export default function Dashboard() {
   const [meta, setMeta]           = useState(null)
   const [contratos, setContratos] = useState([])
   const [ultimaAct, setUltimaAct] = useState(null)
-
   const [categoriaActiva, setCategoriaActiva]           = useState('PENDIENTE')
   const [lapsoActivo, setLapsoActivo]                   = useState(getLapsoDefault)
   const [lapsoModificado, setLapsoModificado]           = useState(false)
@@ -162,7 +155,7 @@ export default function Dashboard() {
       ).length
     } else if (cat.key === 'PENDIENTE') {
       acc[cat.key] = contratos.filter(c =>
-      (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
+        (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
       ).length
     } else {
       acc[cat.key] = contratos.filter(c =>
@@ -174,6 +167,7 @@ export default function Dashboard() {
     return acc
   }, {})
 
+  // PENDIENTE: nunca filtra por fecha, solo por región/ciudad
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
@@ -206,30 +200,6 @@ export default function Dashboard() {
     return true
   })
 
-    const aplicarPlazo = categoriaActiva !== 'PENDIENTE'
-    if (aplicarPlazo && (fechaDesde || fechaHasta)) {
-      const colFecha = categoriaActiva === 'INGRESADO'
-        ? 'FECHA DE ENVÍO'
-        : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
-      if (!matchFecha(c, colFecha)) return false
-    }
-
-    if (ciudadActiva) {
-      if ((c['CIUDAD'] || '').toUpperCase() !== ciudadActiva.toUpperCase()) return false
-    } else if (regionActiva) {
-      if (c._region !== regionActiva) return false
-    }
-
-    if (busqueda.trim()) {
-      const q      = busqueda.trim().toLowerCase()
-      const nombre = (c['CLIENTE'] || '').toLowerCase()
-      const doi    = String(c['DOI'] || '').toLowerCase()
-      if (!nombre.includes(q) && !doi.includes(q)) return false
-    }
-
-    return true
-  })
-
   const horaAct = ultimaAct
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : null
@@ -246,7 +216,7 @@ export default function Dashboard() {
                        ? `DESDE ${fechaDesde.split('-').reverse().join('/')}`
                        : ''
 
-  const plazoEfectivo = (categoriaActiva === 'PENDIENTE' && !lapsoModificado) ? 'TOTAL' : plazoLabel
+  const plazoEfectivo = (categoriaActiva === 'PENDIENTE') ? 'TOTAL' : plazoLabel
   const regionLabel   = ciudadActiva || regionActiva || 'TODAS'
 
   return (
@@ -276,7 +246,6 @@ export default function Dashboard() {
             <p style={{ fontSize: '14px', color: '#888780' }}>Cargando contratos...</p>
           </div>
         )}
-
         {error && (
           <div style={{ background: '#FCEBEB', border: '0.5px solid #F09595', borderRadius: '12px', padding: '16px', fontSize: '14px', color: '#791F1F', marginBottom: '12px' }}>
             <strong>Error:</strong> {error}
@@ -286,14 +255,12 @@ export default function Dashboard() {
             </button>
           </div>
         )}
-
         {errorSolicitud && (
           <div style={{ background: '#FAEEDA', border: '0.5px solid #BA7517', borderRadius: '12px', padding: '12px 16px', fontSize: '13px', color: '#BA7517', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{errorSolicitud}</span>
             <button onClick={() => setErrorSolicitud(null)} style={{ color: '#BA7517', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
           </div>
         )}
-
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -472,4 +439,5 @@ export default function Dashboard() {
       </main>
     </div>
   )
+}
 }
