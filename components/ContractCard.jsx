@@ -11,13 +11,15 @@ function fmt(val) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
 }
 
-export default function ContractCard({ contrato, numero, onSolicitarValidacion }) {
-  const [enviando, setEnviando] = useState(false)
+export default function ContractCard({ contrato, numero, onSolicitarValidacion, acAutenticado, onSolicitarReenvio }) {
+  const [enviando,        setEnviando]        = useState(false)
+  const [enviandoReenvio, setEnviandoReenvio] = useState(false)
 
-  const estado      = contrato._estado || 'INGRESADO'
-  const cfg         = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
-  const esObservado = estado === 'CONTRATO_OBSERVADO'
-  const intentos    = extraerIntentos(contrato)
+  const estado            = contrato._estado || 'INGRESADO'
+  const cfg               = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
+  const esObservado       = estado === 'CONTRATO_OBSERVADO'
+  const intentos          = extraerIntentos(contrato)
+  const reenvioSolicitado = String(contrato['SOLICITUD'] || '').toUpperCase().startsWith('REENVIAR')
 
   async function handleSolicitar() {
     if (enviando) return
@@ -28,6 +30,18 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
       setEnviando(false)
     }
   }
+
+  async function handleReenvio() {
+    if (enviandoReenvio) return
+    setEnviandoReenvio(true)
+    try {
+      await onSolicitarReenvio(contrato['ID'])
+    } finally {
+      setEnviandoReenvio(false)
+    }
+  }
+
+  const mostrarBloqueReenvio = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
 
   return (
     <div style={{
@@ -66,47 +80,46 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
       {/* Datos */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
         <div style={{ fontSize: '11px' }}>
-          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>DOI: </span>
+          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>{'DOI: '}</span>
           <span style={{ color: '#444441' }}>{contrato['DOI'] || '—'}</span>
         </div>
         <div style={{ fontSize: '11px' }}>
-          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>Ciudad: </span>
+          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>{'Ciudad: '}</span>
           <span style={{ color: '#444441' }}>{contrato['CIUDAD'] || '—'}</span>
         </div>
         <div style={{ fontSize: '11px', gridColumn: 'span 2' }}>
-          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>Dealer: </span>
+          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>{'Dealer: '}</span>
           <span style={{ color: '#444441' }}>{contrato['DISTRIBUIDOR'] || '—'}</span>
         </div>
         <div style={{ fontSize: '11px' }}>
-          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>Celular: </span>
+          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>{'Celular: '}</span>
           <span style={{ color: '#444441' }}>{contrato['CELULAR DEL CLIENTE'] || contrato['CELULAR'] || '—'}</span>
         </div>
         <div style={{ fontSize: '11px' }}></div>
         <div style={{ fontSize: '11px' }}>
-          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>Enviado: </span>
+          <span style={{ color: '#5F5E5A', fontWeight: '500' }}>{'Enviado: '}</span>
           <span style={{ color: '#444441' }}>{esObservado ? 'OBSERVADO' : fmt(contrato['FECHA DE ENVÍO'] || contrato['FECHA DE ENVIO'])}</span>
         </div>
         <div style={{ fontSize: '11px' }}>
-          <span style={{ color: estado === 'VENCIDO' ? '#A32D2D' : '#5F5E5A', fontWeight: '500' }}>Vence: </span>
+          <span style={{ color: estado === 'VENCIDO' ? '#A32D2D' : '#5F5E5A', fontWeight: '500' }}>{'Vence: '}</span>
           <span style={{ color: estado === 'VENCIDO' ? '#A32D2D' : '#444441', fontWeight: estado === 'VENCIDO' ? '500' : '400' }}>
             {esObservado ? '—' : fmt(contrato['FECHA DE VENCIMIENTO'])}
           </span>
         </div>
       </div>
 
-      {/* Bloque de solicitud — solo PENDIENTE y SOLICITADO */}
+      {/* Bloque solicitud — PENDIENTE y SOLICITADO */}
       {(estado === 'PENDIENTE' || estado === 'SOLICITADO') && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-
             {estado === 'SOLICITADO' ? (
               <div style={{
                 fontSize: '11px', fontWeight: '500', padding: '6px 14px',
                 borderRadius: '8px', background: '#FFF0E6',
                 color: '#CC5500', border: '0.5px solid #ff6600',
               }}>
-                📋 Validación ya solicitada
+                {'Validacion ya solicitada'}
               </div>
             ) : (
               <button
@@ -119,11 +132,9 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
                   cursor: enviando ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
                 }}
               >
-                {enviando ? 'Enviando...' : 'Solicitar validación'}
+                {enviando ? 'Enviando...' : 'Solicitar validacion'}
               </button>
             )}
-
-            {/* Contador — aparece desde el primer intento */}
             {intentos > 0 && (
               <span style={{
                 fontSize: '10px', fontWeight: '500', padding: '3px 8px',
@@ -131,10 +142,41 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion }
                 color: '#CC5500', border: '0.5px solid #ff6600',
                 whiteSpace: 'nowrap', flexShrink: 0,
               }}>
-                {intentos} {intentos === 1 ? 'intento' : 'intentos'}
+                {intentos}{intentos === 1 ? ' intento' : ' intentos'}
               </span>
             )}
           </div>
+        </>
+      )}
+
+      {/* Bloque reenvio — solo OBSERVADO (firma) */}
+      {mostrarBloqueReenvio && (
+        <>
+          <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
+          {reenvioSolicitado ? (
+            <div style={{
+              fontSize: '11px', fontWeight: '500', padding: '6px 14px',
+              borderRadius: '8px', background: '#E8F0FE',
+              color: '#1A56DB', border: '0.5px solid #4A90D9',
+            }}>
+              {'Reenvio solicitado'}
+            </div>
+          ) : (
+            <button
+              onClick={handleReenvio}
+              disabled={enviandoReenvio}
+              style={{
+                fontSize: '11px', fontWeight: '500', padding: '6px 14px',
+                borderRadius: '8px',
+                background: enviandoReenvio ? '#B4B2A9' : '#1A2238',
+                color: 'white', border: 'none',
+                cursor: enviandoReenvio ? 'not-allowed' : 'pointer',
+                transition: 'background 0.15s',
+              }}
+            >
+              {enviandoReenvio ? 'Enviando...' : 'Reenviar contrato'}
+            </button>
+          )}
         </>
       )}
     </div>
