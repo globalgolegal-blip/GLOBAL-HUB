@@ -5,6 +5,8 @@ import ContractList from '../components/ContractList'
 import { parsearSheet } from '../lib/parseSheets'
 import { derivarEstado, hoyISO, ESTADO_CONFIG } from '../lib/utils'
 import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../lib/regions'
+
+const AC_PIN = '159753'
 const CATEGORIAS = [
   { key: 'PENDIENTE',          label: 'Contratos por firmar',  color: '#185FA5' },
   { key: 'INGRESADO',          label: 'Contratos emitidos',    color: '#534AB7' },
@@ -65,7 +67,13 @@ export default function Dashboard() {
   const [ciudadActiva, setCiudadActiva]                 = useState(null)
   const [busqueda, setBusqueda]                         = useState('')
   const [errorSolicitud, setErrorSolicitud]             = useState(null)
+  const [acAutenticado, setAcAutenticado]               = useState(false)
+  const [pinInput, setPinInput]                         = useState('')
+  const [mostrarPin, setMostrarPin]                     = useState(false)
+  const [pinError, setPinError]                         = useState(false)
+
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
+
   const cargarDatos = useCallback(async () => {
     setCargando(true)
     setError(null)
@@ -90,7 +98,9 @@ export default function Dashboard() {
       setCargando(false)
     }
   }, [])
+
   useEffect(() => { cargarDatos() }, [cargarDatos])
+
   const solicitarValidacion = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -106,6 +116,34 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexión: ' + err.message)
     }
   }, [cargarDatos])
+
+  const solicitarReenvio = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const url = `${SHEET_URL}?accion=reenviar&id=${encodeURIComponent(id)}`
+      const res = await fetch(url)
+      const data = await res.json()
+      if (!data.ok) {
+        setErrorSolicitud('No se pudo registrar el reenvio. Intenta nuevamente.')
+        return
+      }
+      await cargarDatos()
+    } catch (err) {
+      setErrorSolicitud('Error de conexion: ' + err.message)
+    }
+  }, [cargarDatos])
+
+  function verificarPin() {
+    if (pinInput === AC_PIN) {
+      setAcAutenticado(true)
+      setMostrarPin(false)
+      setPinInput('')
+      setPinError(false)
+    } else {
+      setPinError(true)
+    }
+  }
+
   const aplicarLapso = useCallback((lapso) => {
     const hoy  = new Date(); hoy.setHours(0,0,0,0)
     const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
@@ -116,6 +154,7 @@ export default function Dashboard() {
     setLapsoModificado(true)
     setMostrarPersonalizado(lapso === 'personalizado')
   }, [])
+
   function esEmitido(c) {
     return !!normalizarFecha(getFechaEnvio(c)) && c._estado !== 'CONTRATO_OBSERVADO'
   }
@@ -153,6 +192,7 @@ export default function Dashboard() {
     }
     return acc
   }, {})
+
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
@@ -189,6 +229,7 @@ export default function Dashboard() {
     }
     return true
   })
+
   const horaAct = ultimaAct
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : null
@@ -204,22 +245,88 @@ export default function Dashboard() {
                        : ''
   const plazoEfectivo = categoriaActiva === 'PENDIENTE' ? 'TOTAL' : plazoLabel
   const regionLabel   = ciudadActiva || regionActiva || 'TODAS'
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
       <header style={{ backgroundColor: '#1A2238' }} className="px-4 pt-6 pb-5">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div>
-            <h1 style={{ fontSize: '18px', fontWeight: '500', color: 'white' }}>GoTrack</h1>
-            <p style={{ fontSize: '12px', color: '#9BB4D8' }}>
-              {`Seguimiento de contratos${horaAct ? ' · ' + horaAct : ''}`}
-            </p>
+        <div className="max-w-lg mx-auto">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: '18px', fontWeight: '500', color: 'white' }}>GoTrack</h1>
+              <p style={{ fontSize: '12px', color: '#9BB4D8' }}>
+                {`Seguimiento de contratos${horaAct ? ' · ' + horaAct : ''}`}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => { setMostrarPin(v => !v); setPinError(false); setPinInput('') }}
+                title={acAutenticado ? 'AC autenticado' : 'Acceso AC'}
+                style={{ color: acAutenticado ? '#4A90D9' : '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {acAutenticado
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0v4M5 11h14l1 10H4L5 11z" />
+                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  }
+                </svg>
+              </button>
+              <button onClick={cargarDatos} style={{ color: '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <button onClick={cargarDatos} style={{ color: '#9BB4D8', padding: '4px' }}>
-            <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
+          {mostrarPin && !acAutenticado && (
+            <div style={{ marginTop: '12px', background: '#243050', borderRadius: '10px', padding: '12px 14px' }}>
+              <p style={{ fontSize: '11px', color: '#9BB4D8', marginBottom: '8px', fontWeight: '500' }}>
+                {'Acceso Atencion al Cliente'}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="password"
+                  value={pinInput}
+                  onChange={e => { setPinInput(e.target.value); setPinError(false) }}
+                  onKeyDown={e => e.key === 'Enter' && verificarPin()}
+                  placeholder="PIN"
+                  maxLength={10}
+                  style={{
+                    flex: 1, fontSize: '14px', padding: '8px 12px',
+                    borderRadius: '8px', border: pinError ? '1px solid #F09595' : '0.5px solid #4A5568',
+                    background: '#1A2238', color: 'white', outline: 'none',
+                    letterSpacing: '4px',
+                  }}
+                />
+                <button
+                  onClick={verificarPin}
+                  style={{
+                    fontSize: '12px', fontWeight: '500', padding: '8px 16px',
+                    borderRadius: '8px', background: '#4A90D9', color: 'white',
+                    border: 'none', cursor: 'pointer',
+                  }}
+                >
+                  OK
+                </button>
+              </div>
+              {pinError && (
+                <p style={{ fontSize: '11px', color: '#F09595', marginTop: '6px' }}>
+                  {'PIN incorrecto'}
+                </p>
+              )}
+            </div>
+          )}
+          {acAutenticado && mostrarPin && (
+            <div style={{ marginTop: '12px', background: '#243050', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', color: '#4A90D9', fontWeight: '500' }}>{'AC autenticado'}</span>
+              <button
+                onClick={() => { setAcAutenticado(false); setMostrarPin(false) }}
+                style={{ fontSize: '11px', color: '#9BB4D8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {'Cerrar sesion'}
+              </button>
+            </div>
+          )}
         </div>
       </header>
       <main className="max-w-lg mx-auto pb-10" style={{ padding: '12px 12px 40px' }}>
@@ -392,6 +499,8 @@ export default function Dashboard() {
               key={categoriaActiva + '-' + (ciudadActiva || '') + '-' + (regionActiva || '')}
               contratos={contratosFiltrados}
               onSolicitarValidacion={solicitarValidacion}
+              acAutenticado={acAutenticado}
+              onSolicitarReenvio={solicitarReenvio}
             />
             <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
               <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
