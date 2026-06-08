@@ -1,4 +1,4 @@
-  'use client'
+'use client'
 import { useState, useEffect, useCallback } from 'react'
 import MetaCard from '../components/MetaCard'
 import ContractList from '../components/ContractList'
@@ -183,6 +183,20 @@ export default function Dashboard() {
       acc[cat.key] = contratos.filter(c =>
         (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
       ).length
+    } else if (cat.key === 'VENCIDO') {
+      if (lapsoActivo === 'hoy') {
+        acc[cat.key] = contratos.filter(c => {
+          const fv    = normalizarFecha(c['FECHA DE VENCIMIENTO'])
+          const firma = String(c['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase()
+          return fv === fechaHoyStr() && firma !== 'SI' && firma !== 'VENCIDO' && matchLugar(c)
+        }).length
+      } else {
+        acc[cat.key] = contratos.filter(c =>
+          c._estado === 'VENCIDO' &&
+          matchFecha(c, 'FECHA DE VENCIMIENTO') &&
+          matchLugar(c)
+        ).length
+      }
     } else {
       acc[cat.key] = contratos.filter(c =>
         c._estado === cat.key &&
@@ -207,10 +221,20 @@ export default function Dashboard() {
       return true
     } else if (categoriaActiva === 'INGRESADO') {
       if (!esEmitido(c)) return false
+    } else if (categoriaActiva === 'VENCIDO') {
+      const fv    = normalizarFecha(c['FECHA DE VENCIMIENTO'])
+      const firma = String(c['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase()
+      if (lapsoActivo === 'hoy') {
+        if (fv !== fechaHoyStr()) return false
+        if (firma === 'SI' || firma === 'VENCIDO') return false
+      } else {
+        if (c._estado !== 'VENCIDO') return false
+        if ((fechaDesde || fechaHasta) && !matchFecha(c, 'FECHA DE VENCIMIENTO')) return false
+      }
     } else {
       if (c._estado !== categoriaActiva) return false
     }
-    if (categoriaActiva !== 'PENDIENTE' && (fechaDesde || fechaHasta)) {
+    if (categoriaActiva !== 'PENDIENTE' && categoriaActiva !== 'VENCIDO' && (fechaDesde || fechaHasta)) {
       const colFecha = categoriaActiva === 'INGRESADO'
         ? 'FECHA DE ENVÍO'
         : (COL_FECHA[categoriaActiva] || 'FECHA DE ENVÍO')
@@ -280,7 +304,7 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
             <a
-              href="https://gobot-leg.github.io/GOBOT/gobot_faq_68.html"
+              href="https://gobot-leg.github.io/GOBOT/gobot_faq_64.html"
               target="_blank"
               rel="noopener noreferrer"
               style={{
