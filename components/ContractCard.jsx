@@ -38,8 +38,10 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
   const intentos          = extraerIntentos(contrato)
   const reenvioSolicitado = String(contrato['SOLICITUD'] || '').toUpperCase().startsWith('REENVIAR')
 
-  const venceHoy = (estado === 'PENDIENTE' || estado === 'SOLICITADO')
-                && isHoy(contrato['FECHA DE VENCIMIENTO'])
+  const venceHoy       = (estado === 'PENDIENTE' || estado === 'SOLICITADO')
+                     && isHoy(contrato['FECHA DE VENCIMIENTO'])
+  const clienteSinFirmar = estado === 'PENDIENTE'
+                        && String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase() === 'PENDIENTE'
 
   async function handleSolicitar() {
     if (enviando) return
@@ -185,6 +187,16 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
               </span>
             )}
           </div>
+          {clienteSinFirmar && (
+            <p style={{
+              margin: '8px 0 0',
+              fontSize: '10px',
+              color: '#888780',
+              fontStyle: 'italic',
+            }}>
+              {'No se validó · El cliente no ha firmado'}
+            </p>
+          )}
         </>
       )}
 
