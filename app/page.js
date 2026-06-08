@@ -304,7 +304,7 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
             <a
-              href="https://-leg.github.io/GOBOT/gobot_faq_68.html"
+              href="https://gobot-leg.github.io/GOBOT/gobot_faq_68.html"
               target="_blank"
               rel="noopener noreferrer"
               style={{
