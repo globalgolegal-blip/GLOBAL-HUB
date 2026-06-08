@@ -11,6 +11,23 @@ function fmt(val) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
 }
 
+function isHoy(val) {
+  if (!val) return false
+  const s = String(val).trim()
+  let d
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const p = s.split('/')
+    d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]))
+  } else {
+    d = new Date(s)
+  }
+  if (isNaN(d)) return false
+  const hoy = new Date()
+  return d.getFullYear() === hoy.getFullYear()
+      && d.getMonth()    === hoy.getMonth()
+      && d.getDate()     === hoy.getDate()
+}
+
 export default function ContractCard({ contrato, numero, onSolicitarValidacion, acAutenticado, onSolicitarReenvio }) {
   const [enviando,        setEnviando]        = useState(false)
   const [enviandoReenvio, setEnviandoReenvio] = useState(false)
@@ -20,6 +37,9 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
   const esObservado       = estado === 'CONTRATO_OBSERVADO'
   const intentos          = extraerIntentos(contrato)
   const reenvioSolicitado = String(contrato['SOLICITUD'] || '').toUpperCase().startsWith('REENVIAR')
+
+  const venceHoy = (estado === 'PENDIENTE' || estado === 'SOLICITADO')
+                && isHoy(contrato['FECHA DE VENCIMIENTO'])
 
   async function handleSolicitar() {
     if (enviando) return
@@ -76,6 +96,25 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
           {cfg.labelCorto}
         </span>
       </div>
+
+      {/* Banner: vence hoy */}
+      {venceHoy && (
+        <div style={{
+          margin: '0 0 8px',
+          padding: '5px 10px',
+          borderRadius: '6px',
+          background: '#FCEBEB',
+          border: '0.5px solid #F09595',
+          fontSize: '11px',
+          fontWeight: '600',
+          color: '#A32D2D',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+        }}>
+          {'⚠ Vence el dia de hoy — prioridad'}
+        </div>
+      )}
 
       {/* Datos */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
