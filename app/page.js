@@ -573,7 +573,7 @@ export default function Dashboard() {
               {/* Confidencialidad */}
               <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px', marginBottom: '14px', textAlign: 'left' }}>
                 <p style={{ fontSize: '9px', color: '#B4B2A9', lineHeight: '1.6' }}>
-                  {'La información contenida en esta plataforma es de carácter confidencial y de uso exclusivo del personal autorizado de Global Go S.A.C. Su acceso, reproducción o divulgación no autorizada está prohibida.'}
+                  {'La información contenida en esta plataforma es de carácter confidencial y de uso exclusivo del personal autorizado de Global Go S.A.C. y de la Cooperativa de Ahorro y Crédito Promotora de Negocios y Servicios. Su acceso, reproducción o divulgación no autorizada está prohibida.'}
                 </p>
               </div>
 
