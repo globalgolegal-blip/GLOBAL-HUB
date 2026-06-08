@@ -5,7 +5,6 @@ import ContractList from '../components/ContractList'
 import { parsearSheet } from '../lib/parseSheets'
 import { derivarEstado, hoyISO, ESTADO_CONFIG } from '../lib/utils'
 import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../lib/regions'
-
 const AC_PIN = '159753'
 const CATEGORIAS = [
   { key: 'PENDIENTE',          label: 'Contratos por firmar',  color: '#185FA5' },
@@ -71,9 +70,7 @@ export default function Dashboard() {
   const [pinInput, setPinInput]                         = useState('')
   const [mostrarPin, setMostrarPin]                     = useState(false)
   const [pinError, setPinError]                         = useState(false)
-
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
-
   const cargarDatos = useCallback(async () => {
     setCargando(true)
     setError(null)
@@ -98,9 +95,7 @@ export default function Dashboard() {
       setCargando(false)
     }
   }, [])
-
   useEffect(() => { cargarDatos() }, [cargarDatos])
-
   const solicitarValidacion = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -116,7 +111,6 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexión: ' + err.message)
     }
   }, [cargarDatos])
-
   const solicitarReenvio = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -132,7 +126,6 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexion: ' + err.message)
     }
   }, [cargarDatos])
-
   function verificarPin() {
     if (pinInput === AC_PIN) {
       setAcAutenticado(true)
@@ -143,7 +136,6 @@ export default function Dashboard() {
       setPinError(true)
     }
   }
-
   const aplicarLapso = useCallback((lapso) => {
     const hoy  = new Date(); hoy.setHours(0,0,0,0)
     const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1)
@@ -154,7 +146,6 @@ export default function Dashboard() {
     setLapsoModificado(true)
     setMostrarPersonalizado(lapso === 'personalizado')
   }, [])
-
   function esEmitido(c) {
     return !!normalizarFecha(getFechaEnvio(c)) && c._estado !== 'CONTRATO_OBSERVADO'
   }
@@ -206,7 +197,6 @@ export default function Dashboard() {
     }
     return acc
   }, {})
-
   const contratosFiltrados = contratos.filter(c => {
     if (categoriaActiva === 'PENDIENTE') {
       if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
@@ -253,7 +243,6 @@ export default function Dashboard() {
     }
     return true
   })
-
   const horaAct = ultimaAct
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : null
@@ -269,7 +258,6 @@ export default function Dashboard() {
                        : ''
   const plazoEfectivo = categoriaActiva === 'PENDIENTE' ? 'TOTAL' : plazoLabel
   const regionLabel   = ciudadActiva || regionActiva || 'TODAS'
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
       <header style={{ backgroundColor: '#1A2238' }} className="px-4 pt-6 pb-5">
@@ -544,6 +532,8 @@ export default function Dashboard() {
               acAutenticado={acAutenticado}
               onSolicitarReenvio={solicitarReenvio}
             />
+
+            {/* ── FOOTER ── */}
             <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
               <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
                 POWERED BY LEGAL TEAM GO
@@ -554,15 +544,53 @@ export default function Dashboard() {
               <p style={{ fontSize: '10px', color: '#888780', letterSpacing: '0.06em', marginBottom: '16px' }}>
                 GO EQUIPO LEGAL IMAYNA RUWASQAN
               </p>
-              <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
-                <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
-                  Desarrollado con asistencia de Claude
+
+              {/* Bancos de Datos Personales */}
+              <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '14px', marginBottom: '14px', textAlign: 'left' }}>
+                <p style={{ fontSize: '9px', fontWeight: '600', color: '#5F5E5A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  {'Bancos de Datos Personales · ANPD · Ley 29733'}
                 </p>
-                <p style={{ fontSize: '10px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
-                  claude.ai · Anthropic
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <div style={{ background: '#F7F6F2', borderRadius: '6px', padding: '7px 10px', border: '0.5px solid #E8E6DF' }}>
+                    <p style={{ fontSize: '9px', fontWeight: '600', color: '#444441', marginBottom: '1px' }}>
+                      {'Global Go S.A.C.'}
+                    </p>
+                    <p style={{ fontSize: '9px', color: '#888780' }}>
+                      {'Cód. PJ-2026-2079 · Constancia INS-2026-2295 · RUC 20611596155'}
+                    </p>
+                  </div>
+                  <div style={{ background: '#F7F6F2', borderRadius: '6px', padding: '7px 10px', border: '0.5px solid #E8E6DF' }}>
+                    <p style={{ fontSize: '9px', fontWeight: '600', color: '#444441', marginBottom: '1px' }}>
+                      {'Coop. de Ahorro y Crédito Promotora de Negocios y Servicios'}
+                    </p>
+                    <p style={{ fontSize: '9px', color: '#888780' }}>
+                      {'Cód. PJ-2026-2095 · Constancia INS-2026-2312 · RUC 20523897048'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confidencialidad */}
+              <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px', marginBottom: '14px', textAlign: 'left' }}>
+                <p style={{ fontSize: '9px', color: '#B4B2A9', lineHeight: '1.6' }}>
+                  {'La información contenida en esta plataforma es de carácter confidencial y de uso exclusivo del personal autorizado de Global Go S.A.C. Su acceso, reproducción o divulgación no autorizada está prohibida.'}
+                </p>
+              </div>
+
+              {/* Copyright y créditos */}
+              <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
+                <p style={{ fontSize: '9px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                  {`© ${new Date().getFullYear()} Global Go S.A.C. · Todos los derechos reservados`}
+                </p>
+                <p style={{ fontSize: '9px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                  {'Desarrollado con asistencia de Claude'}
+                </p>
+                <p style={{ fontSize: '9px', color: '#B4B2A9', letterSpacing: '0.04em' }}>
+                  {'claude.ai · Anthropic'}
                 </p>
               </div>
             </div>
+
           </div>
         )}
       </main>
