@@ -126,6 +126,22 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexion: ' + err.message)
     }
   }, [cargarDatos])
+
+  const solicitarReenvioVencido = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const url = `${SHEET_URL}?accion=reenviar_vencido&id=${encodeURIComponent(id)}`
+      const res = await fetch(url)
+      const data = await res.json()
+      if (!data.ok) {
+        setErrorSolicitud('No se pudo registrar el reenvio. Intenta nuevamente.')
+        return
+      }
+      await cargarDatos()
+    } catch (err) {
+      setErrorSolicitud('Error de conexion: ' + err.message)
+    }
+  }, [cargarDatos])
   function verificarPin() {
     if (pinInput === AC_PIN) {
       setAcAutenticado(true)
@@ -531,6 +547,7 @@ export default function Dashboard() {
               onSolicitarValidacion={solicitarValidacion}
               acAutenticado={acAutenticado}
               onSolicitarReenvio={solicitarReenvio}
+              onSolicitarReenvioVencido={solicitarReenvioVencido}
             />
 
             {/* ── FOOTER ── */}
