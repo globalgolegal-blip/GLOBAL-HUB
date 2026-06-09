@@ -11,9 +11,8 @@ const ORDEN = {
   INGRESADO:          5,
 }
 
-export default function ContractList({ contratos, onSolicitarValidacion, acAutenticado, onSolicitarReenvio }) {
+export default function ContractList({ contratos, onSolicitarValidacion, acAutenticado, onSolicitarReenvio, onSolicitarReenvioVencido }) {
   const sorted = [...contratos].sort((a, b) => (ORDEN[a._estado] ?? 9) - (ORDEN[b._estado] ?? 9))
-
   return (
     <div className="space-y-2">
       {sorted.map((c, i) => (
@@ -24,6 +23,7 @@ export default function ContractList({ contratos, onSolicitarValidacion, acAuten
           onSolicitarValidacion={onSolicitarValidacion}
           acAutenticado={acAutenticado}
           onSolicitarReenvio={onSolicitarReenvio}
+          onSolicitarReenvioVencido={onSolicitarReenvioVencido}
         />
       ))}
     </div>
