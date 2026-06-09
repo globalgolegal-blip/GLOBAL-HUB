@@ -28,39 +28,44 @@ function isHoy(val) {
       && d.getDate()     === hoy.getDate()
 }
 
-export default function ContractCard({ contrato, numero, onSolicitarValidacion, acAutenticado, onSolicitarReenvio }) {
-  const [enviando,        setEnviando]        = useState(false)
-  const [enviandoReenvio, setEnviandoReenvio] = useState(false)
+export default function ContractCard({ contrato, numero, onSolicitarValidacion, acAutenticado, onSolicitarReenvio, onSolicitarReenvioVencido }) {
+  const [enviando,               setEnviando]               = useState(false)
+  const [enviandoReenvio,        setEnviandoReenvio]        = useState(false)
+  const [enviandoReenvioVencido, setEnviandoReenvioVencido] = useState(false)
 
-  const estado            = contrato._estado || 'INGRESADO'
-  const cfg               = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
-  const esObservado       = estado === 'CONTRATO_OBSERVADO'
-  const intentos          = extraerIntentos(contrato)
-  const reenvioSolicitado = String(contrato['SOLICITUD'] || '').toUpperCase().startsWith('REENVIAR')
+  const estado      = contrato._estado || 'INGRESADO'
+  const cfg         = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
+  const esObservado = estado === 'CONTRATO_OBSERVADO'
+  const intentos    = extraerIntentos(contrato)
 
-  const venceHoy       = (estado === 'PENDIENTE' || estado === 'SOLICITADO')
-                     && isHoy(contrato['FECHA DE VENCIMIENTO'])
+  const solicitudVal             = String(contrato['SOLICITUD'] || '').toUpperCase()
+  const reenvioSolicitado        = solicitudVal.startsWith('REENVIAR') && !solicitudVal.startsWith('REENVIAR_VENCIDO')
+  const reenvioVencidoSolicitado = solicitudVal.startsWith('REENVIAR_VENCIDO')
+
+  const venceHoy = (estado === 'PENDIENTE' || estado === 'SOLICITADO')
+                && isHoy(contrato['FECHA DE VENCIMIENTO'])
   const clienteSinFirmar = estado === 'PENDIENTE'
                         && String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase() === 'PENDIENTE'
 
   async function handleSolicitar() {
     if (enviando) return
     setEnviando(true)
-    try {
-      await onSolicitarValidacion(contrato['ID'])
-    } finally {
-      setEnviando(false)
-    }
+    try { await onSolicitarValidacion(contrato['ID']) }
+    finally { setEnviando(false) }
   }
 
   async function handleReenvio() {
     if (enviandoReenvio) return
     setEnviandoReenvio(true)
-    try {
-      await onSolicitarReenvio(contrato['ID'])
-    } finally {
-      setEnviandoReenvio(false)
-    }
+    try { await onSolicitarReenvio(contrato['ID']) }
+    finally { setEnviandoReenvio(false) }
+  }
+
+  async function handleReenvioVencido() {
+    if (enviandoReenvioVencido) return
+    setEnviandoReenvioVencido(true)
+    try { await onSolicitarReenvioVencido(contrato['ID']) }
+    finally { setEnviandoReenvioVencido(false) }
   }
 
   const mostrarBloqueReenvio = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
@@ -102,17 +107,10 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
       {/* Banner: vence hoy */}
       {venceHoy && (
         <div style={{
-          margin: '0 0 8px',
-          padding: '5px 10px',
-          borderRadius: '6px',
-          background: '#FCEBEB',
-          border: '0.5px solid #F09595',
-          fontSize: '11px',
-          fontWeight: '600',
-          color: '#A32D2D',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
+          margin: '0 0 8px', padding: '5px 10px', borderRadius: '6px',
+          background: '#FCEBEB', border: '0.5px solid #F09595',
+          fontSize: '11px', fontWeight: '600', color: '#A32D2D',
+          display: 'flex', alignItems: 'center', gap: '5px',
         }}>
           {'⚠ Vence el dia de hoy — prioridad'}
         </div>
@@ -188,12 +186,7 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
             )}
           </div>
           {clienteSinFirmar && (
-            <p style={{
-              margin: '8px 0 0',
-              fontSize: '10px',
-              color: '#888780',
-              fontStyle: 'italic',
-            }}>
+            <p style={{ margin: '8px 0 0', fontSize: '10px', color: '#888780', fontStyle: 'italic' }}>
               {'No se validó · El cliente no ha firmado'}
             </p>
           )}
@@ -226,6 +219,37 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
               }}
             >
               {enviandoReenvio ? 'Enviando...' : 'Reenviar contrato'}
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Bloque reenvio vencido — solo VENCIDO, solo AAC */}
+      {estado === 'VENCIDO' && acAutenticado && (
+        <>
+          <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
+          {reenvioVencidoSolicitado ? (
+            <div style={{
+              fontSize: '11px', fontWeight: '500', padding: '6px 14px',
+              borderRadius: '8px', background: '#E8F6FD',
+              color: '#1A7AB5', border: '0.5px solid #87CEEB',
+            }}>
+              {'Reenvio de vencido solicitado'}
+            </div>
+          ) : (
+            <button
+              onClick={handleReenvioVencido}
+              disabled={enviandoReenvioVencido}
+              style={{
+                fontSize: '11px', fontWeight: '500', padding: '6px 14px',
+                borderRadius: '8px',
+                background: enviandoReenvioVencido ? '#B4B2A9' : '#5DADE2',
+                color: 'white', border: 'none',
+                cursor: enviandoReenvioVencido ? 'not-allowed' : 'pointer',
+                transition: 'background 0.15s',
+              }}
+            >
+              {enviandoReenvioVencido ? 'Enviando...' : 'Solicitar reenvio'}
             </button>
           )}
         </>
