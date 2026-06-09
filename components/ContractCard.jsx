@@ -28,6 +28,26 @@ function isHoy(val) {
       && d.getDate()     === hoy.getDate()
 }
 
+// Retorna true si la fecha de vencimiento fue exactamente ayer (vencido por solo 1 día)
+function isVencidoAyer(val) {
+  if (!val) return false
+  const s = String(val).trim()
+  let d
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const p = s.split('/')
+    d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]))
+  } else {
+    d = new Date(s)
+  }
+  if (isNaN(d)) return false
+  const ayer = new Date()
+  ayer.setHours(0, 0, 0, 0)
+  ayer.setDate(ayer.getDate() - 1)
+  return d.getFullYear() === ayer.getFullYear()
+      && d.getMonth()    === ayer.getMonth()
+      && d.getDate()     === ayer.getDate()
+}
+
 export default function ContractCard({ contrato, numero, onSolicitarValidacion, acAutenticado, onSolicitarReenvio, onSolicitarReenvioVencido }) {
   const [enviando,               setEnviando]               = useState(false)
   const [enviandoReenvio,        setEnviandoReenvio]        = useState(false)
@@ -46,6 +66,15 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
                 && isHoy(contrato['FECHA DE VENCIMIENTO'])
   const clienteSinFirmar = estado === 'PENDIENTE'
                         && String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase() === 'PENDIENTE'
+
+  // Vencido hace exactamente 1 día y col P es VENCIDO, NO o vacío → aún permite validar
+  const firmadoRaw = String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase()
+  const puedeValidarVencido = estado === 'VENCIDO'
+      && isVencidoAyer(contrato['FECHA DE VENCIMIENTO'])
+      && firmadoRaw !== 'SI'
+      && firmadoRaw !== 'OBSERVADO'
+  // Si se solicitó validación en un contrato vencido-1día, col T tendrá SOLICITADO|N
+  const vencidoYaSolicitado = puedeValidarVencido && solicitudVal.startsWith('SOLICITADO')
 
   async function handleSolicitar() {
     if (enviando) return
@@ -147,12 +176,21 @@ export default function ContractCard({ contrato, numero, onSolicitarValidacion, 
         </div>
       </div>
 
-      {/* Bloque solicitud — PENDIENTE y SOLICITADO */}
-      {(estado === 'PENDIENTE' || estado === 'SOLICITADO') && (
+      {/* Bloque solicitud — PENDIENTE, SOLICITADO, y VENCIDO de solo 1 día */}
+      {(estado === 'PENDIENTE' || estado === 'SOLICITADO' || puedeValidarVencido) && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
+          {puedeValidarVencido && (
+            <div style={{
+              marginBottom: '8px', padding: '4px 10px', borderRadius: '6px',
+              background: '#FFF8E1', border: '0.5px solid #F5C842',
+              fontSize: '10px', fontWeight: '600', color: '#7A5C00',
+            }}>
+              {'⚠ Vencido ayer — ventana de validacion activa'}
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            {estado === 'SOLICITADO' ? (
+            {(estado === 'SOLICITADO' || vencidoYaSolicitado) ? (
               <div style={{
                 fontSize: '11px', fontWeight: '500', padding: '6px 14px',
                 borderRadius: '8px', background: '#FFF0E6',
