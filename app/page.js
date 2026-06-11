@@ -92,6 +92,7 @@ export default function Dashboard() {
   const [pinLegalInput, setPinLegalInput]               = useState('')
   const [mostrarPinLegal, setMostrarPinLegal]           = useState(false)
   const [pinLegalError, setPinLegalError]               = useState(false)
+  const [busquedaLegal, setBusquedaLegal]               = useState('')
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -344,7 +345,7 @@ export default function Dashboard() {
     }
     return true
   })
-  // Contratos que requieren acción del equipo legal
+  // Contratos que requieren acción del equipo legal (total, para el banner)
   const contratosLegal = contratos.filter(c => {
     const solV = String(c['SOLICITUD'] || '').toUpperCase()
     const est  = c._estado
@@ -353,6 +354,15 @@ export default function Dashboard() {
     if (est === 'VENCIDO' && solV.startsWith('REENVIAR_VENCIDO')) return true
     if (est === 'OBSERVADO' && solV.startsWith('REENVIAR') && !solV.startsWith('REENVIAR_VENCIDO')) return true
     return false
+  })
+
+  // Subconjunto filtrado por búsqueda (se pasa al ContractList en Modo Legal)
+  const contratosLegalFiltrados = contratosLegal.filter(c => {
+    if (!busquedaLegal.trim()) return true
+    const q      = busquedaLegal.trim().toLowerCase()
+    const nombre = (c['CLIENTE'] || '').toLowerCase()
+    const doi    = String(c['DOI'] || '').toLowerCase()
+    return nombre.includes(q) || doi.includes(q)
   })
   const horaAct = ultimaAct
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
@@ -561,6 +571,7 @@ export default function Dashboard() {
             {/* ── MODO LEGAL ── */}
             {legalAutenticado && (
               <>
+                {/* Banner */}
                 <div style={{ background: '#1A3D2B', borderRadius: '12px', padding: '12px 14px', border: '0.5px solid #2A7A50' }}>
                   <p style={{ fontSize: '13px', fontWeight: '600', color: '#4DC987', letterSpacing: '0.06em', marginBottom: '4px' }}>
                     {'MODO LEGAL'}
@@ -569,13 +580,49 @@ export default function Dashboard() {
                     {`${contratosLegal.length} contrato${contratosLegal.length !== 1 ? 's' : ''} requieren atencion legal`}
                   </p>
                 </div>
+
+                {/* Buscador Legal */}
+                <div style={{ position: 'relative' }}>
+                  <svg
+                    style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#888780', pointerEvents: 'none' }}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={busquedaLegal}
+                    onChange={e => setBusquedaLegal(e.target.value)}
+                    placeholder="Buscar por nombre o DOI..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      paddingLeft: '32px', paddingRight: busquedaLegal ? '32px' : '12px',
+                      paddingTop: '8px', paddingBottom: '8px',
+                      fontSize: '12px', color: '#444441',
+                      background: '#F1EFE8', border: '0.5px solid #D3D1C7',
+                      borderRadius: '10px', outline: 'none',
+                    }}
+                  />
+                  {busquedaLegal && (
+                    <button
+                      onClick={() => setBusquedaLegal('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#888780', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      &#x2715;
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista o estados vacíos */}
                 {contratosLegal.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 16px', background: 'white', borderRadius: '12px', border: '0.5px solid #D3D1C7' }}>
                     <p style={{ fontSize: '14px', color: '#888780' }}>{'Sin contratos pendientes de accion legal'}</p>
                   </div>
+                ) : contratosLegalFiltrados.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 16px', background: 'white', borderRadius: '12px', border: '0.5px solid #D3D1C7' }}>
+                    <p style={{ fontSize: '14px', color: '#888780' }}>{`Sin resultados para "${busquedaLegal}"`}</p>
+                  </div>
                 ) : (
                   <ContractList
-                    contratos={contratosLegal}
+                    contratos={contratosLegalFiltrados}
                     onSolicitarValidacion={solicitarValidacion}
                     acAutenticado={acAutenticado}
                     onSolicitarReenvio={solicitarReenvio}
