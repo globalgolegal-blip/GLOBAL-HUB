@@ -159,13 +159,15 @@ export default function ContractCard({
   }
 
   const mostrarBloqueReenvio = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
+  // Detección de Modo Legal: por prop explícito O por presencia de callbacks legales (defensivo)
+  const enModoLegal = legalAutenticado || typeof onLegalValidar === 'function'
   // Visibilidad bloques legales
-  const mostrarLegalValidar  = legalAutenticado && (estado === 'SOLICITADO' || puedeValidarVencido)
-  const mostrarLegalReenvio  = legalAutenticado && estado === 'OBSERVADO' && reenvioSolicitado
-  const mostrarLegalVencido  = legalAutenticado && estado === 'VENCIDO' && reenvioVencidoSolicitado
+  const mostrarLegalValidar  = enModoLegal && (estado === 'SOLICITADO' || puedeValidarVencido)
+  const mostrarLegalReenvio  = enModoLegal && estado === 'OBSERVADO' && reenvioSolicitado
+  const mostrarLegalVencido  = enModoLegal && estado === 'VENCIDO' && reenvioVencidoSolicitado
   // FECHA SOLICITUD — solo visible para Legal
   const fechaSolVal    = contrato['FECHA SOLICITUD'] || ''
-  const tiempoEspera   = legalAutenticado ? tiempoTranscurrido(fechaSolVal) : null
+  const tiempoEspera   = enModoLegal ? tiempoTranscurrido(fechaSolVal) : null
 
   return (
     <div style={{
