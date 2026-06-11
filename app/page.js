@@ -93,6 +93,8 @@ export default function Dashboard() {
   const [mostrarPinLegal, setMostrarPinLegal]           = useState(false)
   const [pinLegalError, setPinLegalError]               = useState(false)
   const [busquedaLegal, setBusquedaLegal]               = useState('')
+  const [regionLegal,   setRegionLegal]                 = useState(null)
+  const [ciudadLegal,   setCiudadLegal]                 = useState(null)
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -356,8 +358,18 @@ export default function Dashboard() {
     return false
   })
 
-  // Subconjunto filtrado por búsqueda (se pasa al ContractList en Modo Legal)
+  // Ciudades disponibles según la región legal activa
+  const ciudadesRegionLegal = regionLegal ? ciudadesDeRegion(regionLegal) : []
+
+  // Subconjunto filtrado por región, ciudad y búsqueda (se pasa al ContractList en Modo Legal)
   const contratosLegalFiltrados = contratosLegal.filter(c => {
+    // Filtro región / ciudad
+    if (ciudadLegal) {
+      if ((c['CIUDAD'] || '').toUpperCase() !== ciudadLegal.toUpperCase()) return false
+    } else if (regionLegal) {
+      if (c._region !== regionLegal) return false
+    }
+    // Filtro búsqueda texto
     if (!busquedaLegal.trim()) return true
     const q      = busquedaLegal.trim().toLowerCase()
     const nombre = (c['CLIENTE'] || '').toLowerCase()
@@ -611,6 +623,52 @@ export default function Dashboard() {
                   )}
                 </div>
 
+                {/* Filtros Región / Ciudad */}
+                <div style={{ background: 'white', borderRadius: '12px', padding: '10px 14px', border: '0.5px solid #D3D1C7' }}>
+                  <p style={{ fontSize: '10px', fontWeight: '600', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>
+                    {'Región / Ciudad'}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {[
+                      { key: null,                 label: 'Todas' },
+                      { key: 'LIMA METROPOLITANA', label: 'Lima Met.' },
+                      { key: 'NORTE',              label: 'Norte' },
+                      { key: 'SUR',                label: 'Sur' },
+                      { key: 'ORIENTE',            label: 'Oriente' },
+                      { key: 'CENTRO',             label: 'Centro' },
+                    ].map(r => (
+                      <button key={r.label}
+                        onClick={() => { setRegionLegal(r.key); setCiudadLegal(null) }}
+                        style={{
+                          fontSize: '11px', padding: '4px 12px', borderRadius: '20px',
+                          background: regionLegal === r.key ? '#1A6B47' : 'white',
+                          color:      regionLegal === r.key ? 'white'   : '#1A2238',
+                          border:     regionLegal === r.key ? '0.5px solid #1A6B47' : '0.5px solid #B4B2A9',
+                          cursor: 'pointer', transition: 'all 0.15s',
+                        }}>
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                  {ciudadesRegionLegal.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                      {ciudadesRegionLegal.map(ciudad => (
+                        <button key={ciudad}
+                          onClick={() => setCiudadLegal(ciudadLegal === ciudad ? null : ciudad)}
+                          style={{
+                            fontSize: '10px', padding: '3px 10px', borderRadius: '20px',
+                            background: ciudadLegal === ciudad ? '#2A7A50' : '#F1EFE8',
+                            color:      ciudadLegal === ciudad ? 'white'   : '#444441',
+                            border:     ciudadLegal === ciudad ? '0.5px solid #2A7A50' : '0.5px solid #D3D1C7',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                          }}>
+                          {ciudad}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Lista o estados vacíos */}
                 {contratosLegal.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 16px', background: 'white', borderRadius: '12px', border: '0.5px solid #D3D1C7' }}>
@@ -618,7 +676,14 @@ export default function Dashboard() {
                   </div>
                 ) : contratosLegalFiltrados.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 16px', background: 'white', borderRadius: '12px', border: '0.5px solid #D3D1C7' }}>
-                    <p style={{ fontSize: '14px', color: '#888780' }}>{`Sin resultados para "${busquedaLegal}"`}</p>
+                    <p style={{ fontSize: '14px', color: '#888780' }}>
+                      {busquedaLegal.trim()
+                        ? `Sin resultados para "${busquedaLegal}"`
+                        : ciudadLegal
+                          ? `Sin contratos pendientes en ${ciudadLegal}`
+                          : `Sin contratos pendientes en ${regionLegal}`
+                      }
+                    </p>
                   </div>
                 ) : (
                   <ContractList
