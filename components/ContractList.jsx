@@ -11,8 +11,26 @@ const ORDEN = {
   INGRESADO:          5,
 }
 
-export default function ContractList({ contratos, onSolicitarValidacion, acAutenticado, onSolicitarReenvio, onSolicitarReenvioVencido }) {
-  const sorted = [...contratos].sort((a, b) => (ORDEN[a._estado] ?? 9) - (ORDEN[b._estado] ?? 9))
+export default function ContractList({
+  contratos, onSolicitarValidacion, acAutenticado,
+  onSolicitarReenvio, onSolicitarReenvioVencido,
+  legalAutenticado, onLegalValidar, onLegalObservar,
+  onLegalMarcarPendiente, onLegalConfirmarReenvio, onLegalReenviarVencido,
+}) {
+  const sorted = [...contratos].sort((a, b) => {
+    // Primero por prioridad de estado
+    const oa = ORDEN[a._estado] ?? 9
+    const ob = ORDEN[b._estado] ?? 9
+    if (oa !== ob) return oa - ob
+    // Desempate: FECHA SOLICITUD más antigua primero (espera más tiempo = prioridad mayor)
+    // Formato yyyy/MM/dd HH:mm permite comparación lexicográfica directa
+    const fa = a['FECHA SOLICITUD'] || ''
+    const fb = b['FECHA SOLICITUD'] || ''
+    if (fa && fb) return fa < fb ? -1 : fa > fb ? 1 : 0
+    if (fa) return -1  // tiene timestamp = solicitado = va antes
+    if (fb) return 1
+    return 0
+  })
   return (
     <div className="space-y-2">
       {sorted.map((c, i) => (
@@ -24,6 +42,12 @@ export default function ContractList({ contratos, onSolicitarValidacion, acAuten
           acAutenticado={acAutenticado}
           onSolicitarReenvio={onSolicitarReenvio}
           onSolicitarReenvioVencido={onSolicitarReenvioVencido}
+          legalAutenticado={legalAutenticado}
+          onLegalValidar={onLegalValidar}
+          onLegalObservar={onLegalObservar}
+          onLegalMarcarPendiente={onLegalMarcarPendiente}
+          onLegalConfirmarReenvio={onLegalConfirmarReenvio}
+          onLegalReenviarVencido={onLegalReenviarVencido}
         />
       ))}
     </div>
