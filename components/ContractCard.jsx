@@ -165,8 +165,8 @@ export default function ContractCard({
   }
 
   const mostrarBloqueReenvio = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
-  // Detección de Modo Legal: por prop explícito O por presencia de callbacks legales (defensivo)
-  const enModoLegal = legalAutenticado || typeof onLegalValidar === 'function'
+  // Modo Legal: controlado exclusivamente por el prop legalAutenticado
+  const enModoLegal = legalAutenticado === true
   // Visibilidad bloques legales
   const mostrarLegalValidar  = enModoLegal && (estado === 'SOLICITADO' || puedeValidarVencido)
   const mostrarLegalReenvio  = enModoLegal && estado === 'OBSERVADO' && reenvioSolicitado
