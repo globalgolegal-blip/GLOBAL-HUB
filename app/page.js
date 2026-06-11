@@ -5,7 +5,8 @@ import ContractList from '../components/ContractList'
 import { parsearSheet } from '../lib/parseSheets'
 import { derivarEstado, hoyISO, ESTADO_CONFIG } from '../lib/utils'
 import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../lib/regions'
-const AC_PIN = '159753'
+const AC_PIN    = '159753'
+const LEGAL_PIN = '4815926'
 const CATEGORIAS = [
   { key: 'PENDIENTE',          label: 'Contratos por firmar',  color: '#185FA5' },
   { key: 'INGRESADO',          label: 'Contratos emitidos',    color: '#534AB7' },
@@ -50,6 +51,23 @@ function normalizarFecha(val) {
   if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
   return ''
 }
+// Helper para Modo Legal: retorna true si la fecha de vencimiento fue exactamente ayer
+function isVencidoAyerPage(val) {
+  if (!val) return false
+  const s = String(val).trim()
+  let d
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const p = s.split('/')
+    d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]))
+  } else { d = new Date(s) }
+  if (isNaN(d)) return false
+  const ayer = new Date()
+  ayer.setHours(0, 0, 0, 0)
+  ayer.setDate(ayer.getDate() - 1)
+  return d.getFullYear() === ayer.getFullYear()
+      && d.getMonth()    === ayer.getMonth()
+      && d.getDate()     === ayer.getDate()
+}
 export default function Dashboard() {
   const [cargando, setCargando]   = useState(true)
   const [error, setError]         = useState(null)
@@ -70,6 +88,10 @@ export default function Dashboard() {
   const [pinInput, setPinInput]                         = useState('')
   const [mostrarPin, setMostrarPin]                     = useState(false)
   const [pinError, setPinError]                         = useState(false)
+  const [legalAutenticado, setLegalAutenticado]         = useState(false)
+  const [pinLegalInput, setPinLegalInput]               = useState('')
+  const [mostrarPinLegal, setMostrarPinLegal]           = useState(false)
+  const [pinLegalError, setPinLegalError]               = useState(false)
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -142,6 +164,59 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexion: ' + err.message)
     }
   }, [cargarDatos])
+
+  // ── Callbacks Modo Legal ──────────────────────────────────────────────────
+  const legalValidar = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const res  = await fetch(`${SHEET_URL}?accion=validar&id=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      if (!data.ok) { setErrorSolicitud('No se pudo validar. Intenta nuevamente.'); return }
+      await cargarDatos()
+    } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+  }, [cargarDatos])
+
+  const legalObservar = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const res  = await fetch(`${SHEET_URL}?accion=observar&id=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      if (!data.ok) { setErrorSolicitud('No se pudo observar. Intenta nuevamente.'); return }
+      await cargarDatos()
+    } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+  }, [cargarDatos])
+
+  const legalMarcarPendiente = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const res  = await fetch(`${SHEET_URL}?accion=marcar_pendiente&id=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      if (!data.ok) { setErrorSolicitud('No se pudo marcar como pendiente. Intenta nuevamente.'); return }
+      await cargarDatos()
+    } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+  }, [cargarDatos])
+
+  const legalConfirmarReenvio = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const res  = await fetch(`${SHEET_URL}?accion=confirmar_reenvio&id=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      if (!data.ok) { setErrorSolicitud('No se pudo confirmar el reenvio. Intenta nuevamente.'); return }
+      await cargarDatos()
+    } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+  }, [cargarDatos])
+
+  const legalReenviarVencido = useCallback(async (id, nuevaFecha) => {
+    setErrorSolicitud(null)
+    try {
+      const url  = `${SHEET_URL}?accion=reenviar_vencido_legal&id=${encodeURIComponent(id)}&nueva_fecha=${encodeURIComponent(nuevaFecha)}`
+      const res  = await fetch(url)
+      const data = await res.json()
+      if (!data.ok) { setErrorSolicitud('No se pudo procesar el reenvio vencido. Intenta nuevamente.'); return }
+      await cargarDatos()
+    } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+  }, [cargarDatos])
+
   function verificarPin() {
     if (pinInput === AC_PIN) {
       setAcAutenticado(true)
@@ -150,6 +225,16 @@ export default function Dashboard() {
       setPinError(false)
     } else {
       setPinError(true)
+    }
+  }
+  function verificarPinLegal() {
+    if (pinLegalInput === LEGAL_PIN) {
+      setLegalAutenticado(true)
+      setMostrarPinLegal(false)
+      setPinLegalInput('')
+      setPinLegalError(false)
+    } else {
+      setPinLegalError(true)
     }
   }
   const aplicarLapso = useCallback((lapso) => {
@@ -259,6 +344,16 @@ export default function Dashboard() {
     }
     return true
   })
+  // Contratos que requieren acción del equipo legal
+  const contratosLegal = contratos.filter(c => {
+    const solV = String(c['SOLICITUD'] || '').toUpperCase()
+    const est  = c._estado
+    if (est === 'SOLICITADO') return true
+    if (est === 'VENCIDO' && isVencidoAyerPage(c['FECHA DE VENCIMIENTO'])) return true
+    if (est === 'VENCIDO' && solV.startsWith('REENVIAR_VENCIDO')) return true
+    if (est === 'OBSERVADO' && solV.startsWith('REENVIAR') && !solV.startsWith('REENVIAR_VENCIDO')) return true
+    return false
+  })
   const horaAct = ultimaAct
     ? ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     : null
@@ -286,8 +381,9 @@ export default function Dashboard() {
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Botón AC */}
               <button
-                onClick={() => { setMostrarPin(v => !v); setPinError(false); setPinInput('') }}
+                onClick={() => { setMostrarPin(v => !v); setPinError(false); setPinInput(''); setMostrarPinLegal(false) }}
                 title={acAutenticado ? 'AC autenticado' : 'Acceso AC'}
                 style={{ color: acAutenticado ? '#4A90D9' : '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}
               >
@@ -296,6 +392,16 @@ export default function Dashboard() {
                     ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0v4M5 11h14l1 10H4L5 11z" />
                     : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   }
+                </svg>
+              </button>
+              {/* Botón Legal */}
+              <button
+                onClick={() => { setMostrarPinLegal(v => !v); setPinLegalError(false); setPinLegalInput(''); setMostrarPin(false) }}
+                title={legalAutenticado ? 'Modo Legal activo' : 'Acceso Equipo Legal'}
+                style={{ color: legalAutenticado ? '#4DC987' : '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </button>
               <button onClick={cargarDatos} style={{ color: '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -373,6 +479,57 @@ export default function Dashboard() {
               </button>
             </div>
           )}
+
+          {/* ── Modal Legal PIN ── */}
+          {mostrarPinLegal && !legalAutenticado && (
+            <div style={{ marginTop: '12px', background: '#0F2D1E', borderRadius: '10px', padding: '12px 14px', border: '0.5px solid #1A6B47' }}>
+              <p style={{ fontSize: '11px', color: '#4DC987', marginBottom: '8px', fontWeight: '500' }}>
+                {'Acceso Equipo Legal'}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="password"
+                  value={pinLegalInput}
+                  onChange={e => { setPinLegalInput(e.target.value); setPinLegalError(false) }}
+                  onKeyDown={e => e.key === 'Enter' && verificarPinLegal()}
+                  placeholder="PIN"
+                  maxLength={10}
+                  style={{
+                    flex: 1, fontSize: '14px', padding: '8px 12px',
+                    borderRadius: '8px', border: pinLegalError ? '1px solid #F09595' : '0.5px solid #1A6B47',
+                    background: '#0A1F12', color: 'white', outline: 'none',
+                    letterSpacing: '4px',
+                  }}
+                />
+                <button
+                  onClick={verificarPinLegal}
+                  style={{
+                    fontSize: '12px', fontWeight: '500', padding: '8px 16px',
+                    borderRadius: '8px', background: '#1A6B47', color: 'white',
+                    border: 'none', cursor: 'pointer',
+                  }}
+                >
+                  OK
+                </button>
+              </div>
+              {pinLegalError && (
+                <p style={{ fontSize: '11px', color: '#F09595', marginTop: '6px' }}>
+                  {'PIN incorrecto'}
+                </p>
+              )}
+            </div>
+          )}
+          {legalAutenticado && mostrarPinLegal && (
+            <div style={{ marginTop: '12px', background: '#0F2D1E', borderRadius: '10px', padding: '10px 14px', border: '0.5px solid #1A6B47', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', color: '#4DC987', fontWeight: '500' }}>{'Modo Legal activo'}</span>
+              <button
+                onClick={() => { setLegalAutenticado(false); setMostrarPinLegal(false) }}
+                style={{ fontSize: '11px', color: '#6BCB99', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {'Cerrar sesion'}
+              </button>
+            </div>
+          )}
         </div>
       </header>
       <main className="max-w-lg mx-auto pb-10" style={{ padding: '12px 12px 40px' }}>
@@ -400,6 +557,42 @@ export default function Dashboard() {
         )}
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+            {/* ── MODO LEGAL ── */}
+            {legalAutenticado && (
+              <>
+                <div style={{ background: '#1A3D2B', borderRadius: '12px', padding: '12px 14px', border: '0.5px solid #2A7A50' }}>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: '#4DC987', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                    {'MODO LEGAL'}
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#6BCB99' }}>
+                    {`${contratosLegal.length} contrato${contratosLegal.length !== 1 ? 's' : ''} requieren atencion legal`}
+                  </p>
+                </div>
+                {contratosLegal.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 16px', background: 'white', borderRadius: '12px', border: '0.5px solid #D3D1C7' }}>
+                    <p style={{ fontSize: '14px', color: '#888780' }}>{'Sin contratos pendientes de accion legal'}</p>
+                  </div>
+                ) : (
+                  <ContractList
+                    contratos={contratosLegal}
+                    onSolicitarValidacion={solicitarValidacion}
+                    acAutenticado={acAutenticado}
+                    onSolicitarReenvio={solicitarReenvio}
+                    onSolicitarReenvioVencido={solicitarReenvioVencido}
+                    legalAutenticado={legalAutenticado}
+                    onLegalValidar={legalValidar}
+                    onLegalObservar={legalObservar}
+                    onLegalMarcarPendiente={legalMarcarPendiente}
+                    onLegalConfirmarReenvio={legalConfirmarReenvio}
+                    onLegalReenviarVencido={legalReenviarVencido}
+                  />
+                )}
+              </>
+            )}
+
+            {/* ── VISTA NORMAL ── */}
+            {!legalAutenticado && (<>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               {CATEGORIAS.map(cat => (
                 <button
@@ -548,7 +741,14 @@ export default function Dashboard() {
               acAutenticado={acAutenticado}
               onSolicitarReenvio={solicitarReenvio}
               onSolicitarReenvioVencido={solicitarReenvioVencido}
+              legalAutenticado={legalAutenticado}
+              onLegalValidar={legalValidar}
+              onLegalObservar={legalObservar}
+              onLegalMarcarPendiente={legalMarcarPendiente}
+              onLegalConfirmarReenvio={legalConfirmarReenvio}
+              onLegalReenviarVencido={legalReenviarVencido}
             />
+            </>)}
 
             {/* ── FOOTER ── */}
             <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
