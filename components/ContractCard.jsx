@@ -28,16 +28,22 @@ function isHoy(val) {
       && d.getDate()     === hoy.getDate()
 }
 
-// Retorna true si la fecha de vencimiento fue exactamente ayer (vencido por solo 1 día)
-// Retorna "hace Xh Ym" o "hace Xm" a partir de un timestamp 'yyyy/MM/dd HH:mm'
+// Retorna "hace Xh Ym" o "hace Xm" a partir de un timestamp.
+// Acepta: 'yyyy/MM/dd HH:mm' (texto en Sheet) o ISO string (cuando Sheets serializa la fecha como Date)
 function tiempoTranscurrido(val) {
   if (!val) return null
   const s = String(val).trim()
-  // formato yyyy/MM/dd HH:mm → Date
+  let d
+  // Formato guardado como texto: yyyy/MM/dd HH:mm
   const m = s.match(/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/)
-  if (!m) return null
-  const d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]))
-  if (isNaN(d)) return null
+  if (m) {
+    // Construimos en hora local de Lima (el valor ya viene en PET)
+    d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]))
+  } else {
+    // Google Sheets puede serializar celdas de tipo Date como ISO string al hacer JSON.stringify
+    d = new Date(s)
+  }
+  if (!d || isNaN(d.getTime())) return null
   const mins = Math.floor((Date.now() - d.getTime()) / 60000)
   if (mins < 1) return 'ahora mismo'
   if (mins < 60) return `hace ${mins}m`
