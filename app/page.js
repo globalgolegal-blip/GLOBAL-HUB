@@ -553,6 +553,17 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+          <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.12)', marginTop: 4 }}>
+  <span style={{ flex: 1, textAlign: 'center', padding: '8px 0', fontSize: 13,
+    fontWeight: 700, color: 'white', borderBottom: '2px solid white', cursor: 'default' }}>
+    Proceso de Desembolso
+  </span>
+  <a href="/ventas-segunda" style={{ flex: 1, textAlign: 'center', padding: '8px 0',
+    fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.6)', textDecoration: 'none',
+    borderBottom: '2px solid transparent' }}>
+    Ventas de Segunda
+  </a>
+</div>
       </header>
       <main className="max-w-lg mx-auto pb-10" style={{ padding: '12px 12px 40px' }}>
         {cargando && (
