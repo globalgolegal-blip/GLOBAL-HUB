@@ -99,7 +99,19 @@ export default function VentasSegundaPage() {
               )}
             </div>
           </div>
-
+<div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '8px' }}>
+  
+    href="/"
+    style={{
+      display: 'flex', alignItems: 'center', gap: '4px',
+      fontSize: '11px', fontWeight: '500', color: '#9BB4D8',
+      textDecoration: 'none', padding: '4px 8px',
+      borderRadius: '6px', border: '0.5px solid #2D3A5A',
+    }}
+  >
+    {'← Proceso de Desembolso'}
+  </a>
+</div>
           {/* Tab switch — Desembolso apunta al proyecto externo */}
           <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
             <a
