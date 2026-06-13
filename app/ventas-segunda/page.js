@@ -4,9 +4,9 @@
 // y el tab switch apuntando al proyecto Desembolso via env var.
 
 import { useState, useEffect, useCallback } from 'react'
-import { autenticarVS } from '../lib/auth'
-import { parsearVentas } from '../lib/ventas-segunda/parseSheets'
-import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../lib/ventas-segunda/utils'
+import { autenticarVS } from '../../lib/auth'
+import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
+import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
 
 const VS_SCRIPT_URL      = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
