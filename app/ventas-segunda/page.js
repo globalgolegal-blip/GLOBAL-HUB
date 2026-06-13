@@ -135,7 +135,7 @@ Sección de acceso restringido — ingresa tu PIN
 
 <input
 type="password"
-inputMode="numeric"
+inputMode="text"
 maxLength={20}
 value={pinInput}
 onChange={e => { setPinInput(e.target.value); setPinError('') }}
