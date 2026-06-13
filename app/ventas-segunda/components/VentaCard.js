@@ -1,8 +1,8 @@
 'use client'
 // app/components/VentaCard.js
 import { useState } from 'react'
-import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../lib/ventas-segunda/utils'
-import { puedeVerPagos, puedeObservarDocs } from '../../lib/auth'
+import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../../lib/ventas-segunda/utils'
+import { puedeVerPagos, puedeObservarDocs } from '../../../lib/auth'
 
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
 
