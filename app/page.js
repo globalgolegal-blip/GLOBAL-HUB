@@ -434,24 +434,35 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-            <a
-              href="https://gobot-leg.github.io/GOBOT/gobot_faq_68.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                fontSize: '11px', fontWeight: '500', color: '#9BB4D8',
-                textDecoration: 'none', padding: '4px 8px',
-                borderRadius: '6px', border: '0.5px solid #2D3A5A',
-              }}
-            >
-              <svg style={{ width: '13px', height: '13px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {'GoBot · Resuelve tus dudas'}
-            </a>
-          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+  
+    href="https://gobot-leg.github.io/GOBOT/gobot_faq_68.html"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      display: 'flex', alignItems: 'center', gap: '4px',
+      fontSize: '11px', fontWeight: '500', color: '#9BB4D8',
+      textDecoration: 'none', padding: '4px 8px',
+      borderRadius: '6px', border: '0.5px solid #2D3A5A',
+    }}
+  >
+    <svg style={{ width: '13px', height: '13px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    {'GoBot · Resuelve tus dudas'}
+  </a>
+  
+    href="/ventas-segunda"
+    style={{
+      display: 'flex', alignItems: 'center', gap: '4px',
+      fontSize: '11px', fontWeight: '500', color: '#9BB4D8',
+      textDecoration: 'none', padding: '4px 8px',
+      borderRadius: '6px', border: '0.5px solid #2D3A5A',
+    }}
+  >
+    {'Ventas de Segunda →'}
+  </a>
+</div>
           {mostrarPin && !acAutenticado && (
             <div style={{ marginTop: '12px', background: '#243050', borderRadius: '10px', padding: '12px 14px' }}>
               <p style={{ fontSize: '11px', color: '#9BB4D8', marginBottom: '8px', fontWeight: '500' }}>
