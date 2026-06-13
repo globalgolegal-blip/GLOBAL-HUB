@@ -1,6 +1,6 @@
 'use client'
 // app/components/VentaList.js
-import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../lib/ventas-segunda/utils'
+import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../../lib/ventas-segunda/utils'
 import VentaCard from './VentaCard'
 
 export default function VentaList({ ventas, busqueda, rol, onActualizar }) {
