@@ -112,20 +112,6 @@ borderRadius: '6px', border: '0.5px solid #2D3A5A',
 {'← Proceso de Desembolso'}
 </a>
 </div>
-{/* Tab switch — Desembolso apunta al proyecto externo */}
-<div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-<a
-href={DESEMBOLSO_URL}
-style={{ flex: 1, textAlign: 'center', padding: '8px 0', fontSize: 13, fontWeight: 500,
-color: 'rgba(255,255,255,0.6)', textDecoration: 'none', borderBottom: '2px solid transparent' }}
->
-Proceso de Desembolso
-</a>
-<span style={{ flex: 1, textAlign: 'center', padding: '8px 0', fontSize: 13, fontWeight: 700,
-color: 'white', borderBottom: '2px solid white', cursor: 'default' }}>
-Ventas de Segunda
-</span>
-</div>
 </div>
 </header>
 
