@@ -429,7 +429,7 @@ d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8
 </div>
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
 <a
-href="https://gobot-leg.github.io/GOBOT/gobot_faq_68.html"
+href="https://gobot-leg.github.io/GOBOT/gobot_faq_74.html"
 target="_blank"
 rel="noopener noreferrer"
 style={{
