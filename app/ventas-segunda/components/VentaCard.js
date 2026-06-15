@@ -1,11 +1,7 @@
 'use client'
 // app/ventas-segunda/components/VentaCard.js
-// Muestra acciones y documentos según el rol del usuario.
-//
-// rol === null     → Comercial: puede agendar/sin_cita en estado CONFIRMADO
-// rol === 'tesoreria' → confirmar_a_notaria, observar, GM, inscribir
-// rol === 'notaria'   → confirmar_cita (ventana 30 min), observar, firmar
-// rol === 'legal'     → observar cualquier etapa
+// Campos del objeto venta siguen la convención MAYÚSCULAS de parseSheets.js.
+// El índice de fila se lee de venta._idx (pasado por VentaList).
 
 import { useState } from 'react'
 import {
@@ -17,9 +13,7 @@ import {
 import { getPermisos } from '../../../lib/auth'
 
 const VS_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
-
-const NAVY  = '#1A2238'
-const CREAM = '#F1EFE8'
+const NAVY   = '#1A2238'
 
 // ── Helpers de UI ────────────────────────────────────────────
 
@@ -28,7 +22,7 @@ function Btn({ onClick, disabled, color = NAVY, children, small }) {
     <button onClick={onClick} disabled={disabled}
       style={{
         background: disabled ? '#E5E7EB' : color,
-        color: disabled ? '#9CA3AF' : 'white',
+        color:      disabled ? '#9CA3AF' : 'white',
         border: 'none', borderRadius: 6,
         padding: small ? '5px 10px' : '7px 14px',
         fontSize: small ? 11 : 12, fontWeight: 600,
@@ -53,21 +47,38 @@ function LinkDoc({ url, label }) {
   )
 }
 
+function InfoRow({ label, value, warn, small }) {
+  if (!value) return null
+  return (
+    <div style={{ marginBottom: 2 }}>
+      <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase',
+        letterSpacing: '0.04em', fontWeight: 600 }}>{label}: </span>
+      <span style={{ fontSize: small ? 11 : 12, color: warn ? '#9D174D' : '#374151',
+        whiteSpace: 'pre-wrap' }}>{value}</span>
+    </div>
+  )
+}
+
+const inputStyle = {
+  flex: 1, border: '1px solid #D1D5DB', borderRadius: 6,
+  padding: '6px 8px', fontSize: 13, outline: 'none',
+}
+
 // ── Componente principal ─────────────────────────────────────
 
-export default function VentaCard({ venta, idx, rol, onActualizar }) {
-  const estado  = derivarEstadoVS(venta)
-  const cfg     = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
+export default function VentaCard({ venta, rol, onActualizar }) {
+  const estado   = derivarEstadoVS(venta)
+  const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
 
-  const [expandido,    setExpandido]    = useState(false)
-  const [cargando,     setCargando]     = useState(false)
-  const [agendaOpen,   setAgendaOpen]   = useState(false)
-  const [obsOpen,      setObsOpen]      = useState(false)
-  const [fechaCita,    setFechaCita]    = useState('')
-  const [horaCita,     setHoraCita]     = useState('')
-  const [obsTexto,     setObsTexto]     = useState('')
-  const [msg,          setMsg]          = useState(null)   // { tipo: 'ok'|'err', texto }
+  const [expandido,  setExpandido]  = useState(false)
+  const [cargando,   setCargando]   = useState(false)
+  const [agendaOpen, setAgendaOpen] = useState(false)
+  const [obsOpen,    setObsOpen]    = useState(false)
+  const [fechaCita,  setFechaCita]  = useState('')
+  const [horaCita,   setHoraCita]   = useState('')
+  const [obsTexto,   setObsTexto]   = useState('')
+  const [msg,        setMsg]        = useState(null)
 
   const puedeAccion = (accion) => permisos.acciones.includes(accion)
 
@@ -81,7 +92,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
     setCargando(true)
     setMsg(null)
     try {
-      const qs  = new URLSearchParams({ row: idx, ...params }).toString()
+      const qs  = new URLSearchParams({ row: venta._idx, ...params }).toString()
       const res = await fetch(`${VS_URL}?${qs}`, { cache: 'no-store' })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Error desconocido')
@@ -97,14 +108,14 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
   }
 
   // ── Acciones ───────────────────────────────────────────────
-  const confirmarANotaria  = () => llamarAPI({ action: 'confirmar_a_notaria' })
-  const confirmarCita      = () => llamarAPI({ action: 'confirmar_cita' })
-  const marcarSinCita      = () => llamarAPI({ action: 'sin_cita' })
-  const solicitarGM        = () => llamarAPI({ action: 'solicitar_gm' })
-  const levantarGM         = () => llamarAPI({ action: 'levantar_gm' })
-  const firmar             = () => llamarAPI({ action: 'firmar' })
-  const inscribir          = () => llamarAPI({ action: 'inscribir' })
-  const resolverObs        = () => llamarAPI({ action: 'resolver_obs' })
+  const confirmarANotaria = () => llamarAPI({ action: 'confirmar_a_notaria' })
+  const confirmarCitaAct  = () => llamarAPI({ action: 'confirmar_cita' })
+  const marcarSinCita     = () => llamarAPI({ action: 'sin_cita' })
+  const solicitarGM       = () => llamarAPI({ action: 'solicitar_gm' })
+  const levantarGM        = () => llamarAPI({ action: 'levantar_gm' })
+  const firmar            = () => llamarAPI({ action: 'firmar' })
+  const inscribir         = () => llamarAPI({ action: 'inscribir' })
+  const resolverObs       = () => llamarAPI({ action: 'resolver_obs' })
 
   const agendarCita = () => {
     if (!validarAnticipacionCita(fechaCita, horaCita)) return
@@ -116,9 +127,8 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
     llamarAPI({ action: 'observar_docs', obs: obsTexto.trim() })
   }
 
-  // Validaciones de tiempo
   const citaValida         = validarAnticipacionCita(fechaCita, horaCita)
-  const confirmacionActiva = puedeConfirmarCita(venta.fechaCita, venta.horaCita)
+  const confirmacionActiva = puedeConfirmarCita(venta.FECHA_CITA, venta.HORA_CITA)
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -132,13 +142,13 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
           padding: '12px 14px', cursor: 'pointer', userSelect: 'none' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: NAVY }}>{venta.placa}</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: NAVY }}>{venta.PLACA}</span>
             <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
               color: cfg.colorText, background: cfg.bgBadge, border: `1px solid ${cfg.borderBadge}` }}>
               {cfg.labelCorto}
             </span>
           </div>
-          <span style={{ fontSize: 12, color: '#6B7280' }}>{venta.nombre}</span>
+          <span style={{ fontSize: 12, color: '#6B7280' }}>{venta.NOMBRE}</span>
         </div>
         <span style={{ color: '#9CA3AF', fontSize: 18 }}>{expandido ? '▲' : '▼'}</span>
       </div>
@@ -149,29 +159,31 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
 
           {/* Datos básicos */}
           <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-            <InfoRow label="DNI/CE"    value={venta.dni} />
-            <InfoRow label="Teléfono"  value={venta.telefono} />
-            {venta.fechaCita && <InfoRow label="Cita" value={`${venta.fechaCita} ${venta.horaCita || ''}`} />}
-            {venta.sinCita   && <InfoRow label="Sin cita" value="Sí — directo a firma" />}
-            {venta.observacionDocs && (
+            <InfoRow label="DNI/CE"   value={venta.DNI} />
+            <InfoRow label="Teléfono" value={venta.TELEFONO} />
+            {venta.FECHA_CITA && (
+              <InfoRow label="Cita" value={`${venta.FECHA_CITA} ${venta.HORA_CITA || ''}`.trim()} />
+            )}
+            {venta.SIN_CITA && <InfoRow label="Sin cita" value="Sí — directo a firma" />}
+            {venta.OBSERVACION_DOCS && (
               <div style={{ gridColumn: '1/-1' }}>
-                <InfoRow label="Obs. docs" value={venta.observacionDocs} warn />
+                <InfoRow label="Obs. docs" value={venta.OBSERVACION_DOCS} warn />
               </div>
             )}
-            {venta.observaciones && (
+            {venta.OBSERVACIONES && (
               <div style={{ gridColumn: '1/-1' }}>
-                <InfoRow label="Historial" value={venta.observaciones} small />
+                <InfoRow label="Historial" value={venta.OBSERVACIONES} small />
               </div>
             )}
           </div>
 
-          {/* Documentos — solo para tesoreria, notaria, legal */}
+          {/* Documentos — solo tesorería, notaría, legal */}
           {permisos.verDocumentos && (
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              <LinkDoc url={venta.pagoVehiculo}    label="Pago vehículo"   />
-              <LinkDoc url={venta.fotoDniAnv}      label="DNI Anverso"     />
-              <LinkDoc url={venta.fotoDniRev}      label="DNI Reverso"     />
-              <LinkDoc url={venta.pagoNotariales}  label="Pago notariales" />
+              <LinkDoc url={venta.PAGO_VEHICULO}   label="Pago vehículo"   />
+              <LinkDoc url={venta.FOTO_DNI_ANV}    label="DNI Anverso"     />
+              <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
+              <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
             </div>
           )}
 
@@ -188,7 +200,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
           {/* ── ACCIONES POR ROL ─────────────────────────── */}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-            {/* COMERCIAL (sin PIN): agendar/reagendar en CONFIRMADO o PENDIENTE_REAGENDA */}
+            {/* COMERCIAL — agendar/reagendar en CONFIRMADO o PENDIENTE_REAGENDA */}
             {!rol && (estado === 'CONFIRMADO' || estado === 'PENDIENTE_REAGENDA') && (
               <>
                 {!agendaOpen ? (
@@ -204,7 +216,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0',
                     borderRadius: 8, padding: 10 }}>
                     <p style={{ fontSize: 12, color: '#374151', margin: '0 0 8px', fontWeight: 600 }}>
-                      Agendar cita — mínimo 2 horas de anticipación
+                      {estado === 'PENDIENTE_REAGENDA' ? 'Reagendar cita' : 'Agendar cita'} — mínimo 2 horas de anticipación
                     </p>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       <input type="date" value={fechaCita} onChange={e => setFechaCita(e.target.value)}
@@ -236,13 +248,13 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
                     ✅ Confirmar a Notaría
                   </Btn>
                 )}
-                {(estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA') && puedeAccion('solicitar_gm') && !venta.gmSolicitada && (
+                {(estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA') && puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
                   <Btn onClick={solicitarGM} disabled={cargando} color="#7C3AED" small>Solicitar GM</Btn>
                 )}
-                {venta.gmSolicitada && !venta.gmLevantada && puedeAccion('levantar_gm') && (
+                {venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
                   <Btn onClick={levantarGM} disabled={cargando} color="#065F46" small>Levantar GM</Btn>
                 )}
-                {venta.fechaFirma && !venta.fechaInscripcion && puedeAccion('inscribir') && (
+                {venta.FECHA_FIRMA && !venta.FECHA_INSCRIPCION && puedeAccion('inscribir') && (
                   <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small>Inscribir RRPP</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
@@ -259,7 +271,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'EN_CITA' && puedeAccion('confirmar_cita') && (
                   <div>
-                    <Btn onClick={confirmarCita} disabled={!confirmacionActiva || cargando} color="#0F766E">
+                    <Btn onClick={confirmarCitaAct} disabled={!confirmacionActiva || cargando} color="#0F766E">
                       ✅ Confirmar cita
                     </Btn>
                     {!confirmacionActiva && (
@@ -269,7 +281,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
                     )}
                   </div>
                 )}
-                {(estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA' || estado === 'GM_LEVANTADA') && puedeAccion('firmar') && !venta.fechaFirma && (
+                {(estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA' || estado === 'GM_LEVANTADA') && puedeAccion('firmar') && !venta.FECHA_FIRMA && (
                   <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small>Registrar firma</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
@@ -293,7 +305,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
               </div>
             )}
 
-            {/* Modal de observación (compartido por todos los roles) */}
+            {/* Modal de observación */}
             {obsOpen && (
               <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA',
                 borderRadius: 8, padding: 10 }}>
@@ -307,7 +319,7 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
                     borderRadius: 6, padding: '7px 10px', fontSize: 12, resize: 'vertical', outline: 'none' }} />
                 <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                   <Btn onClick={enviarObservacion} disabled={!obsTexto.trim() || cargando} color="#9D174D">
-                    Guardar observación
+                    Guardar
                   </Btn>
                   <Btn onClick={() => setObsOpen(false)} color="#6B7280" small>Cancelar</Btn>
                 </div>
@@ -319,23 +331,4 @@ export default function VentaCard({ venta, idx, rol, onActualizar }) {
       )}
     </div>
   )
-}
-
-// ── Helpers de display ───────────────────────────────────────
-
-function InfoRow({ label, value, warn, small }) {
-  if (!value) return null
-  return (
-    <div style={{ marginBottom: 2 }}>
-      <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase',
-        letterSpacing: '0.04em', fontWeight: 600 }}>{label}: </span>
-      <span style={{ fontSize: small ? 11 : 12, color: warn ? '#9D174D' : '#374151',
-        whiteSpace: 'pre-wrap' }}>{value}</span>
-    </div>
-  )
-}
-
-const inputStyle = {
-  flex: 1, border: '1px solid #D1D5DB', borderRadius: 6,
-  padding: '6px 8px', fontSize: 13, outline: 'none',
 }
