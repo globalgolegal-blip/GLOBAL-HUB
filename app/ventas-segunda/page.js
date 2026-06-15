@@ -65,13 +65,19 @@ export default function VentasSegundaPage() {
     setLogin(false)
   }
 
+  // Calcular estado una sola vez por venta para no llamar derivarEstadoVS múltiples veces
+  const estados = ventas.map(v => derivarEstadoVS(v))
+  const count = (estado) => estados.filter(e => e === estado).length
+
   const stats = {
-    confirmados:     ventas.filter(v => derivarEstadoVS(v) === 'CONFIRMADO').length,
-    agendados:       ventas.filter(v => derivarEstadoVS(v) === 'EN_CITA').length,
-    citaConfirmada:  ventas.filter(v => derivarEstadoVS(v) === 'CITA_CONFIRMADA').length,
-    docsObservados:  ventas.filter(v => derivarEstadoVS(v) === 'DOCS_OBSERVADOS').length,
-    reagendar:       ventas.filter(v => derivarEstadoVS(v) === 'PENDIENTE_REAGENDA').length,
-    firmados:        ventas.filter(v => derivarEstadoVS(v) === 'FIRMADO').length,
+    ingresados:      count('INGRESADO'),
+    confirmados:     count('CONFIRMADO'),
+    agendados:       count('EN_CITA'),
+    citaConfirmada:  count('CITA_CONFIRMADA'),
+    docsObservados:  count('DOCS_OBSERVADOS'),
+    reagendar:       count('PENDIENTE_REAGENDA'),
+    firmados:        count('FIRMADO'),
+    inscritos:       count('INSCRITO'),
   }
 
   return (
@@ -163,12 +169,14 @@ export default function VentasSegundaPage() {
 
         {/* Cards de métricas */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
-          <MetricCard label="CONFIRMADOS"    count={stats.confirmados}    color="#92400E" />
-          <MetricCard label="AGENDADOS"      count={stats.agendados}      color="#1D4ED8" />
-          <MetricCard label="CITA OK"        count={stats.citaConfirmada} color="#065F46" />
-          <MetricCard label="DOCS OBSERVADOS" count={stats.docsObservados} color="#DC2626" />
-          <MetricCard label="REAGENDAR"      count={stats.reagendar}      color="#B45309" />
-          <MetricCard label="FIRMADOS"       count={stats.firmados}       color="#3730A3" />
+          <MetricCard label="INGRESADOS"      count={stats.ingresados}      color="#1E40AF" />
+          <MetricCard label="CONFIRMADOS"     count={stats.confirmados}     color="#92400E" />
+          <MetricCard label="AGENDADOS"       count={stats.agendados}       color="#065F46" />
+          <MetricCard label="CITA OK"         count={stats.citaConfirmada}  color="#3730A3" />
+          <MetricCard label="DOCS OBSERVADOS" count={stats.docsObservados}  color="#DC2626" />
+          <MetricCard label="REAGENDAR"       count={stats.reagendar}       color="#B45309" />
+          <MetricCard label="FIRMADOS"        count={stats.firmados}        color="#1D4ED8" />
+          <MetricCard label="INSCRITOS"       count={stats.inscritos}       color="#166534" />
         </div>
 
         {/* Buscador */}
