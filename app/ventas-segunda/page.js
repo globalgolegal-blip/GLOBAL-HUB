@@ -30,8 +30,11 @@ export default function VentasSegundaPage() {
     setErrorData(null)
     try {
       const res  = await fetch(VS_SCRIPT_URL, { cache: 'no-store' })
-      if (!res.ok) throw new Error(`Error ${res.status}`)
+      if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
       const data = await res.json()
+      // El Apps Script devuelve { ok: false, error: "..." } cuando falla internamente.
+      // Sin esta verificación, el error se oculta y ventas queda vacío.
+      if (data && data.ok === false) throw new Error(data.error || 'Error en el servidor')
       const filas = Array.isArray(data) ? data : (data.filas || [])
       setVentas(parsearVentas(filas))
       setUltimaAct(new Date())
