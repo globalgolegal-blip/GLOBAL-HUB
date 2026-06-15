@@ -9,6 +9,7 @@ import {
   ESTADO_CONFIG_VS,
   ESTADO_DESCRIPCION,
   validarAnticipacionCita,
+  validarRangoHorario,
   puedeConfirmarCita,
 } from '../../../lib/ventas-segunda/utils'
 import { getPermisos } from '../../../lib/auth'
@@ -149,7 +150,9 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     llamarAPI({ action: 'observar_docs', obs: obsTexto.trim(), area })
   }
 
-  const citaValida         = validarAnticipacionCita(fechaCita, horaCita)
+  const rangoValido        = validarRangoHorario(horaCita)
+  const anticipacionValida = validarAnticipacionCita(fechaCita, horaCita)
+  const citaValida         = rangoValido && anticipacionValida
   const confirmacionActiva = puedeConfirmarCita(venta.FECHA_CITA, venta.HORA_CITA)
 
   // ── Render ─────────────────────────────────────────────────
@@ -252,9 +255,14 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                       <input type="time" value={horaCita} onChange={e => setHoraCita(e.target.value)}
                         style={inputStyle} />
                     </div>
-                    {fechaCita && horaCita && !citaValida && (
+                    {fechaCita && horaCita && !rangoValido && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ La cita debe ser con al menos 2 horas de anticipación.
+                        ⚠ Horario no permitido. Citas solo de 11:00–12:30 y 13:30–16:45.
+                      </p>
+                    )}
+                    {fechaCita && horaCita && rangoValido && !anticipacionValida && (
+                      <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
+                        ⚠ La cita debe agendarse con al menos 2 horas de anticipación.
                       </p>
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
