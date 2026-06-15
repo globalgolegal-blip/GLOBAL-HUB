@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { autenticarVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
-import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../lib/ventas-segunda/utils'
+import { derivarEstadoVS } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
 
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
@@ -62,11 +62,14 @@ export default function VentasSegundaPage() {
     setLogin(false)
   }
 
-  const resumen = ventas.reduce((acc, v) => {
-    const e = derivarEstadoVS(v)
-    acc[e] = (acc[e] || 0) + 1
-    return acc
-  }, {})
+  const stats = {
+    confirmados:     ventas.filter(v => derivarEstadoVS(v) === 'CONFIRMADO').length,
+    agendados:       ventas.filter(v => derivarEstadoVS(v) === 'EN_CITA').length,
+    citaConfirmada:  ventas.filter(v => derivarEstadoVS(v) === 'CITA_CONFIRMADA').length,
+    docsObservados:  ventas.filter(v => derivarEstadoVS(v) === 'DOCS_OBSERVADOS').length,
+    reagendar:       ventas.filter(v => derivarEstadoVS(v) === 'PENDIENTE_REAGENDA').length,
+    firmados:        ventas.filter(v => derivarEstadoVS(v) === 'FIRMADO').length,
+  }
 
   return (
     <div style={{ background: '#F1EFE8', minHeight: '100vh' }}>
@@ -155,22 +158,15 @@ export default function VentasSegundaPage() {
       {/* CONTENIDO */}
       <main style={{ maxWidth: 512, margin: '0 auto', padding: '16px 12px 40px' }}>
 
-        {/* Resumen de estados */}
-        {ventas.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 12 }}>
-            {Object.entries(resumen).map(([est, cnt]) => {
-              const cfg = ESTADO_CONFIG_VS[est]
-              if (!cfg) return null
-              return (
-                <div key={est} style={{ flexShrink: 0, fontSize: 11, fontWeight: 600,
-                  padding: '4px 10px', borderRadius: 12, color: cfg.colorText,
-                  background: cfg.bgBadge, border: `1px solid ${cfg.borderBadge}` }}>
-                  {cfg.labelCorto}: {cnt}
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {/* Cards de métricas */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+          <MetricCard label="Confirmados"    count={stats.confirmados}    color="#92400E" bg="#FEF3C7" border="#FCD34D" />
+          <MetricCard label="Agendados"      count={stats.agendados}      color="#065F46" bg="#D1FAE5" border="#6EE7B7" />
+          <MetricCard label="Cita OK"        count={stats.citaConfirmada} color="#3730A3" bg="#EDE9FE" border="#A78BFA" />
+          <MetricCard label="Docs Obs."      count={stats.docsObservados} color="#9D174D" bg="#FCE7F3" border="#F9A8D4" />
+          <MetricCard label="Reagendar"      count={stats.reagendar}      color="#B45309" bg="#FEF9C3" border="#FDE047" />
+          <MetricCard label="Firmados"       count={stats.firmados}       color="#1D4ED8" bg="#EFF6FF" border="#93C5FD" />
+        </div>
 
         {/* Buscador */}
         <div style={{ marginBottom: 12, position: 'relative' }}>
@@ -215,6 +211,16 @@ export default function VentasSegundaPage() {
           </p>
         )}
       </main>
+    </div>
+  )
+}
+
+function MetricCard({ label, count, color, bg, border }) {
+  return (
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10,
+      padding: '10px 8px', textAlign: 'center' }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color, lineHeight: 1.2 }}>{count}</div>
+      <div style={{ fontSize: 10, fontWeight: 600, color, marginTop: 2, opacity: 0.85 }}>{label}</div>
     </div>
   )
 }
