@@ -110,7 +110,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   // ── Acciones ───────────────────────────────────────────────
   const confirmarANotaria = () => llamarAPI({ action: 'confirmar_a_notaria' })
   const confirmarCitaAct  = () => llamarAPI({ action: 'confirmar_cita' })
-  const marcarSinCita     = () => llamarAPI({ action: 'sin_cita' })
   const solicitarGM       = () => llamarAPI({ action: 'solicitar_gm' })
   const levantarGM        = () => llamarAPI({ action: 'levantar_gm' })
   const firmar            = () => llamarAPI({ action: 'firmar' })
@@ -208,9 +207,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     <Btn onClick={() => setAgendaOpen(true)} color="#2563EB">
                       {estado === 'PENDIENTE_REAGENDA' ? '🔄 Reagendar cita' : '📅 Agendar cita'}
                     </Btn>
-                    {estado === 'CONFIRMADO' && (
-                      <Btn onClick={marcarSinCita} disabled={cargando} color="#92400E" small>Sin cita</Btn>
-                    )}
                   </div>
                 ) : (
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0',
@@ -248,12 +244,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     ✅ Confirmar a Notaría
                   </Btn>
                 )}
-                {(estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA') && puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
-                  <Btn onClick={solicitarGM} disabled={cargando} color="#7C3AED" small>Solicitar GM</Btn>
-                )}
-                {venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
-                  <Btn onClick={levantarGM} disabled={cargando} color="#065F46" small>Levantar GM</Btn>
-                )}
                 {venta.FECHA_FIRMA && !venta.FECHA_INSCRIPCION && puedeAccion('inscribir') && (
                   <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small>Inscribir RRPP</Btn>
                 )}
@@ -281,7 +271,14 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     )}
                   </div>
                 )}
-                {(estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA' || estado === 'GM_LEVANTADA') && puedeAccion('firmar') && !venta.FECHA_FIRMA && (
+                {/* Solicitar GM — cuando la cita está confirmada y aún no hay GM */}
+                {estado === 'CITA_CONFIRMADA' && puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
+                  <Btn onClick={solicitarGM} disabled={cargando} color="#7C3AED" small>
+                    ⚠ Solicitar levant. GM
+                  </Btn>
+                )}
+                {/* Firmar — cuando hay cita confirmada o GM ya levantada */}
+                {(estado === 'CITA_CONFIRMADA' || estado === 'GM_LEVANTADA') && puedeAccion('firmar') && !venta.FECHA_FIRMA && (
                   <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small>Registrar firma</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
@@ -296,6 +293,12 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             {/* LEGAL */}
             {rol === 'legal' && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {/* GM pendiente de levantar — Legal responde con este botón */}
+                {venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
+                  <Btn onClick={levantarGM} disabled={cargando} color="#065F46">
+                    ✅ GM Levantada
+                  </Btn>
+                )}
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
                 )}
