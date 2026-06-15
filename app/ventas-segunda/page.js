@@ -159,13 +159,13 @@ export default function VentasSegundaPage() {
       <main style={{ maxWidth: 512, margin: '0 auto', padding: '16px 12px 40px' }}>
 
         {/* Cards de métricas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
-          <MetricCard label="Confirmados"    count={stats.confirmados}    color="#92400E" bg="#FEF3C7" border="#FCD34D" />
-          <MetricCard label="Agendados"      count={stats.agendados}      color="#065F46" bg="#D1FAE5" border="#6EE7B7" />
-          <MetricCard label="Cita OK"        count={stats.citaConfirmada} color="#3730A3" bg="#EDE9FE" border="#A78BFA" />
-          <MetricCard label="Docs Obs."      count={stats.docsObservados} color="#9D174D" bg="#FCE7F3" border="#F9A8D4" />
-          <MetricCard label="Reagendar"      count={stats.reagendar}      color="#B45309" bg="#FEF9C3" border="#FDE047" />
-          <MetricCard label="Firmados"       count={stats.firmados}       color="#1D4ED8" bg="#EFF6FF" border="#93C5FD" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
+          <MetricCard label="CONFIRMADOS"    count={stats.confirmados}    color="#92400E" />
+          <MetricCard label="AGENDADOS"      count={stats.agendados}      color="#1D4ED8" />
+          <MetricCard label="CITA OK"        count={stats.citaConfirmada} color="#065F46" />
+          <MetricCard label="DOCS OBSERVADOS" count={stats.docsObservados} color="#DC2626" />
+          <MetricCard label="REAGENDAR"      count={stats.reagendar}      color="#B45309" />
+          <MetricCard label="FIRMADOS"       count={stats.firmados}       color="#3730A3" />
         </div>
 
         {/* Buscador */}
@@ -215,12 +215,19 @@ export default function VentasSegundaPage() {
   )
 }
 
-function MetricCard({ label, count, color, bg, border }) {
+function MetricCard({ label, count, color }) {
   return (
-    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10,
-      padding: '10px 8px', textAlign: 'center' }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color, lineHeight: 1.2 }}>{count}</div>
-      <div style={{ fontSize: 10, fontWeight: 600, color, marginTop: 2, opacity: 0.85 }}>{label}</div>
+    <div style={{
+      background: 'white',
+      border: '1.5px solid #D9D4C8',
+      borderRadius: 12,
+      padding: '14px 16px',
+    }}>
+      <div style={{ fontSize: 36, fontWeight: 700, color: '#1A2238', lineHeight: 1.1 }}>{count}</div>
+      <div style={{
+        fontSize: 10, fontWeight: 700, color,
+        marginTop: 6, letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>{label}</div>
     </div>
   )
 }
