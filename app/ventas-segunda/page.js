@@ -22,6 +22,7 @@ export default function VentasSegundaPage() {
   const [errorData, setErrorData]   = useState(null)
   const [ultimaAct, setUltimaAct]   = useState(null)
   const [busqueda, setBusqueda]     = useState('')
+  const [filtroEstado, setFiltroEstado] = useState(null)
 
   // Carga inicial sin necesidad de PIN
   const cargarVentas = useCallback(async () => {
@@ -67,7 +68,13 @@ export default function VentasSegundaPage() {
 
   // Calcular estado una sola vez por venta para no llamar derivarEstadoVS múltiples veces
   const estados = ventas.map(v => derivarEstadoVS(v))
-  const count = (estado) => estados.filter(e => e === estado).length
+  const count = (e) => estados.filter(x => x === e).length
+
+  // Filtrado por click en metric card (toggle)
+  const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
+  const ventasFiltradas = filtroEstado
+    ? ventas.filter((_, i) => estados[i] === filtroEstado)
+    : ventas
 
   const stats = {
     ingresados:      count('INGRESADO'),
@@ -167,16 +174,26 @@ export default function VentasSegundaPage() {
       {/* CONTENIDO */}
       <main style={{ maxWidth: 512, margin: '0 auto', padding: '16px 12px 40px' }}>
 
-        {/* Cards de métricas */}
+        {/* Cards de métricas — click para filtrar lista */}
+        {filtroEstado && (
+          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6, textAlign: 'right' }}>
+            Filtrando por estado —{' '}
+            <button onClick={() => setFiltroEstado(null)}
+              style={{ background: 'none', border: 'none', color: '#2563EB', cursor: 'pointer',
+                fontSize: 12, fontWeight: 600, padding: 0 }}>
+              Ver todos
+            </button>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
-          <MetricCard label="INGRESADOS"      count={stats.ingresados}      color="#1E40AF" />
-          <MetricCard label="CONFIRMADOS"     count={stats.confirmados}     color="#92400E" />
-          <MetricCard label="AGENDADOS"       count={stats.agendados}       color="#065F46" />
-          <MetricCard label="CITA OK"         count={stats.citaConfirmada}  color="#3730A3" />
-          <MetricCard label="DOCS OBSERVADOS" count={stats.docsObservados}  color="#DC2626" />
-          <MetricCard label="REAGENDAR"       count={stats.reagendar}       color="#B45309" />
-          <MetricCard label="FIRMADOS"        count={stats.firmados}        color="#1D4ED8" />
-          <MetricCard label="INSCRITOS"       count={stats.inscritos}       color="#166534" />
+          <MetricCard label="INGRESADOS"      count={stats.ingresados}     color="#1E40AF" estado="INGRESADO"          activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="CONFIRMADOS"     count={stats.confirmados}    color="#92400E" estado="CONFIRMADO"         activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="AGENDADOS"       count={stats.agendados}      color="#065F46" estado="EN_CITA"            activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="CITA OK"         count={stats.citaConfirmada} color="#3730A3" estado="CITA_CONFIRMADA"    activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="DOCS OBSERVADOS" count={stats.docsObservados} color="#DC2626" estado="DOCS_OBSERVADOS"    activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="REAGENDAR"       count={stats.reagendar}      color="#B45309" estado="PENDIENTE_REAGENDA" activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="FIRMADOS"        count={stats.firmados}       color="#1D4ED8" estado="FIRMADO"            activo={filtroEstado} onToggle={toggleFiltro} />
+          <MetricCard label="INSCRITOS"       count={stats.inscritos}      color="#166534" estado="INSCRITO"           activo={filtroEstado} onToggle={toggleFiltro} />
         </div>
 
         {/* Buscador */}
@@ -209,7 +226,7 @@ export default function VentasSegundaPage() {
 
         {!cargando && !errorData && (
           <VentaList
-            ventas={ventas}
+            ventas={ventasFiltradas}
             busqueda={busqueda}
             rol={usuario?.rol ?? null}
             onActualizar={cargarVentas}
@@ -226,14 +243,18 @@ export default function VentasSegundaPage() {
   )
 }
 
-function MetricCard({ label, count, color }) {
+function MetricCard({ label, count, color, estado, activo, onToggle }) {
+  const isActive = activo === estado
   return (
-    <div style={{
-      background: 'white',
-      border: '1.5px solid #D9D4C8',
-      borderRadius: 12,
-      padding: '14px 16px',
-    }}>
+    <div onClick={() => onToggle(estado)}
+      style={{
+        background: isActive ? color + '12' : 'white',
+        border: isActive ? `2px solid ${color}` : '1.5px solid #D9D4C8',
+        borderRadius: 12,
+        padding: isActive ? '13px 15px' : '14px 16px',
+        cursor: 'pointer',
+        transition: 'border 0.12s, background 0.12s',
+      }}>
       <div style={{ fontSize: 36, fontWeight: 700, color: '#1A2238', lineHeight: 1.1 }}>{count}</div>
       <div style={{
         fontSize: 10, fontWeight: 700, color,
