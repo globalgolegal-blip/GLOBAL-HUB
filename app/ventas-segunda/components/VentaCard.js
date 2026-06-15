@@ -7,6 +7,7 @@ import { useState } from 'react'
 import {
   derivarEstadoVS,
   ESTADO_CONFIG_VS,
+  ESTADO_DESCRIPCION,
   validarAnticipacionCita,
   puedeConfirmarCita,
 } from '../../../lib/ventas-segunda/utils'
@@ -64,12 +65,33 @@ const inputStyle = {
   padding: '6px 8px', fontSize: 13, outline: 'none',
 }
 
+// Mapeo de rol → nombre de área para etiquetar observaciones
+const AREA_NOMBRE = {
+  tesoreria: 'TESORERÍA',
+  notaria:   'NOTARÍA',
+  legal:     'LEGAL',
+}
+
+// Extrae área y texto de una observación guardada como "[ÁREA] texto"
+function parsearObservacion(obs) {
+  if (!obs) return { area: '', texto: '' }
+  const m = obs.match(/^\[([^\]]+)\]\s*(.*)/)
+  if (m) return { area: m[1], texto: m[2] }
+  return { area: '', texto: obs }
+}
+
 // ── Componente principal ─────────────────────────────────────
 
 export default function VentaCard({ venta, rol, onActualizar }) {
   const estado   = derivarEstadoVS(venta)
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
+
+  // Texto de situación al pie del card
+  const { area: areaObs, texto: textoObs } = parsearObservacion(venta.OBSERVACION_DOCS)
+  const descripcionEstado = estado === 'DOCS_OBSERVADOS'
+    ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
+    : (ESTADO_DESCRIPCION[estado] || '')
 
   const [expandido,  setExpandido]  = useState(false)
   const [cargando,   setCargando]   = useState(false)
@@ -123,7 +145,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
 
   const enviarObservacion = () => {
     if (!obsTexto.trim()) return
-    llamarAPI({ action: 'observar_docs', obs: obsTexto.trim() })
+    const area = AREA_NOMBRE[rol] || ''
+    llamarAPI({ action: 'observar_docs', obs: obsTexto.trim(), area })
   }
 
   const citaValida         = validarAnticipacionCita(fechaCita, horaCita)
@@ -148,6 +171,12 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             </span>
           </div>
           <span style={{ fontSize: 12, color: '#6B7280' }}>{venta.NOMBRE}</span>
+          {descripcionEstado ? (
+            <div style={{ fontSize: 11, color: cfg.colorText, marginTop: 5,
+              fontWeight: 500, lineHeight: 1.4 }}>
+              {descripcionEstado}
+            </div>
+          ) : null}
         </div>
         <span style={{ color: '#9CA3AF', fontSize: 18 }}>{expandido ? '▲' : '▼'}</span>
       </div>
@@ -166,7 +195,10 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             {venta.SIN_CITA && <InfoRow label="Sin cita" value="Sí — directo a firma" />}
             {venta.OBSERVACION_DOCS && (
               <div style={{ gridColumn: '1/-1' }}>
-                <InfoRow label="Obs. docs" value={venta.OBSERVACION_DOCS} warn />
+                {areaObs
+                  ? <InfoRow label={`Obs. por ${areaObs}`} value={textoObs} warn />
+                  : <InfoRow label="Obs. docs" value={textoObs || venta.OBSERVACION_DOCS} warn />
+                }
               </div>
             )}
             {venta.OBSERVACIONES && (
