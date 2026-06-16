@@ -150,7 +150,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     llamarAPI({ action: 'observar_docs', obs: obsTexto.trim(), area })
   }
 
-  const rangoValido        = validarRangoHorario(horaCita)
+  const rangoValido        = validarRangoHorario(horaCita, fechaCita || null)
   const anticipacionValida = validarAnticipacionCita(fechaCita, horaCita)
   const citaValida         = rangoValido && anticipacionValida
   const confirmacionActiva = puedeConfirmarCita(venta.FECHA_CITA, venta.HORA_CITA)
@@ -257,7 +257,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     </div>
                     {fechaCita && horaCita && !rangoValido && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ Horario no permitido. Citas solo de 11:00–12:30 y 13:30–16:45.
+                        ⚠ Horario no permitido. Citas solo de 09:15–12:30 y 14:15–16:30.
                       </p>
                     )}
                     {fechaCita && horaCita && rangoValido && !anticipacionValida && (
@@ -317,8 +317,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     ⚠ Solicitar levant. GM
                   </Btn>
                 )}
-                {/* Firmar — cuando hay cita confirmada o GM ya levantada */}
-                {(estado === 'CITA_CONFIRMADA' || estado === 'GM_LEVANTADA') && puedeAccion('firmar') && !venta.FECHA_FIRMA && (
+                {/* Firmar — SOLO cuando GM ha sido levantada (flujo GM siempre obligatorio) */}
+                {estado === 'GM_LEVANTADA' && puedeAccion('firmar') && !venta.FECHA_FIRMA && (
                   <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small>Registrar firma</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
