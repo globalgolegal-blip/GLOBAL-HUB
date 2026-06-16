@@ -303,6 +303,15 @@ export default function VentasSegundaPage() {
         />
 
       )}
+      {/* FOOTER */}
+      <footer style={{ textAlign: 'center', padding: '20px 16px 32px' }}>
+        <p style={{ fontSize: 11, color: '#9CA3AF', margin: 0 }}>
+          Desarrollado por{' '}
+          <span style={{ fontWeight: 600, color: '#6B7280' }}>Fernando Barzola</span>
+          {' '}y{' '}
+          <span style={{ fontWeight: 600, color: '#6B7280' }}>Juan Carlos Barrientos</span>
+        </p>
+      </footer>
     </div>
   )
 }
