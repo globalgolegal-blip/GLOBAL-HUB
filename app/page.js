@@ -907,6 +907,9 @@ GO EQUIPO LEGAL IMAYNA RUWASQAN
 <p style={{ fontSize: '9px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
 {`© ${new Date().getFullYear()} Global Go S.A.C. · Todos los derechos reservados`}
 </p>
+<p style={{ fontSize: '9px', color: '#6B7280', letterSpacing: '0.04em', marginBottom: '2px', fontWeight: '600' }}>
+{'Desarrollado por Fernando Barzola y Juan Carlos Barrientos'}
+</p>
 <p style={{ fontSize: '9px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
 {'Desarrollado con asistencia de Claude'}
 </p>
