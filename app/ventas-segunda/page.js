@@ -13,14 +13,14 @@ const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
 const NAVY = '#1A2238'
 
 // Slots de agenda: cada 15 min dentro de los rangos permitidos
-// Lun–Vie: mañana 09:15–12:45 · tarde 14:15–16:45
+// Lun–Vie: mañana 09:15–12:30 · tarde 14:15–16:30
 // Sábado : mañana 09:15–11:45 (un solo bloque)
 const SLOTS_MANANA = []   // Lun–Vie mañana
 const SLOTS_TARDE  = []   // Lun–Vie tarde
 const SLOTS_SAB    = []   // Sábado
 const _slot = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-for (let m = 555; m <= 765; m += 15) SLOTS_MANANA.push(_slot(m))
-for (let m = 855; m <= 1005; m += 15) SLOTS_TARDE.push(_slot(m))
+for (let m = 555; m <= 750; m += 15) SLOTS_MANANA.push(_slot(m))
+for (let m = 855; m <= 990; m += 15) SLOTS_TARDE.push(_slot(m))
 for (let m = 555; m <= 705; m += 15) SLOTS_SAB.push(_slot(m))
 
 function formatFechaLocal(d) {
@@ -52,6 +52,7 @@ export default function VentasSegundaPage() {
   const [pinError, setPinError]         = useState('')
   const [ventas, setVentas]             = useState([])
   const [cargando, setCargando]         = useState(false)
+  const [actualizando, setActualizando] = useState(false)
   const [errorData, setErrorData]       = useState(null)
   const [ultimaAct, setUltimaAct]       = useState(null)
   const [busqueda, setBusqueda]         = useState('')
@@ -59,9 +60,10 @@ export default function VentasSegundaPage() {
   const [vista, setVista]               = useState('lista')   // 'lista' | 'agenda'
   const [fechaAgenda, setFechaAgenda]   = useState(formatFechaLocal(new Date()))
 
-  const cargarVentas = useCallback(async () => {
+  const cargarVentas = useCallback(async (esInicial = false) => {
     if (!VS_SCRIPT_URL) { setErrorData('Variable NEXT_PUBLIC_VS_SCRIPT_URL no configurada.'); return }
-    setCargando(true)
+    if (esInicial) setCargando(true)
+    else setActualizando(true)
     setErrorData(null)
     try {
       const res  = await fetch(VS_SCRIPT_URL, { cache: 'no-store' })
@@ -75,10 +77,17 @@ export default function VentasSegundaPage() {
       setErrorData(e.message)
     } finally {
       setCargando(false)
+      setActualizando(false)
     }
   }, [])
 
-  useEffect(() => { cargarVentas() }, [cargarVentas])
+  useEffect(() => { cargarVentas(true) }, [cargarVentas])
+
+  // Auto-refresh cada 90 segundos sin perder sesión de PIN
+  useEffect(() => {
+    const id = setInterval(() => cargarVentas(false), 90_000)
+    return () => clearInterval(id)
+  }, [cargarVentas])
 
   const verificarPin = () => {
     const usr = autenticarVS(pinInput)
@@ -113,8 +122,9 @@ export default function VentasSegundaPage() {
     citaConfirmada: count('CITA_CONFIRMADA'),
     docsObservados: count('DOCS_OBSERVADOS'),
     reagendar:      count('PENDIENTE_REAGENDA'),
+    gmSolicitada:   count('GM_SOLICITADA'),
+    gmLevantada:    count('GM_LEVANTADA'),
     firmados:       count('FIRMADO'),
-    inscritos:      count('INSCRITO'),
   }
 
   const moverDia = (delta) => {
@@ -137,7 +147,7 @@ export default function VentasSegundaPage() {
               {usuario ? (
                 <>
                   <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>{usuario.nombre}</span>
-                  <button onClick={cargarVentas} disabled={cargando} title="Actualizar"
+                  <button onClick={() => cargarVentas(false)} disabled={cargando || actualizando} title="Actualizar"
                     style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 16, cursor: 'pointer' }}>
                     🔄
                   </button>
@@ -149,7 +159,7 @@ export default function VentasSegundaPage() {
                 </>
               ) : (
                 <>
-                  <button onClick={cargarVentas} disabled={cargando} title="Actualizar"
+                  <button onClick={() => cargarVentas(false)} disabled={cargando || actualizando} title="Actualizar"
                     style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 15, cursor: 'pointer' }}>
                     🔄
                   </button>
@@ -237,17 +247,48 @@ export default function VentasSegundaPage() {
             </div>
           )}
 
-          {/* Metric cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
-            <MetricCard label="INGRESADOS"      count={stats.ingresados}     color="#1E40AF" estado="INGRESADO"          activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="CONFIRMADOS"     count={stats.confirmados}    color="#92400E" estado="CONFIRMADO"         activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="AGENDADOS"       count={stats.agendados}      color="#065F46" estado="EN_CITA"            activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="CITA OK"         count={stats.citaConfirmada} color="#3730A3" estado="CITA_CONFIRMADA"    activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="DOCS OBSERVADOS" count={stats.docsObservados} color="#DC2626" estado="DOCS_OBSERVADOS"    activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="REAGENDAR"       count={stats.reagendar}      color="#B45309" estado="PENDIENTE_REAGENDA" activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="FIRMADOS"        count={stats.firmados}       color="#1D4ED8" estado="FIRMADO"            activo={filtroEstado} onToggle={toggleFiltro} />
-            <MetricCard label="INSCRITOS"       count={stats.inscritos}      color="#166534" estado="INSCRITO"           activo={filtroEstado} onToggle={toggleFiltro} />
+          {/* Metric cards — Alertas + Pipeline */}
+
+          {/* Fila 1: Alert cards para estados que necesitan atención */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <AlertCard
+              label="DOCS OBSERVADOS" count={stats.docsObservados}
+              color="#DC2626" borderColor="#FCA5A5"
+              estado="DOCS_OBSERVADOS" activo={filtroEstado} onToggle={toggleFiltro}
+            />
+            <AlertCard
+              label="REAGENDAS" count={stats.reagendar}
+              color="#B45309" borderColor="#FCD34D"
+              estado="PENDIENTE_REAGENDA" activo={filtroEstado} onToggle={toggleFiltro}
+            />
           </div>
+
+          {/* Fila 2: Pipeline strip — flujo normal */}
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #D9D4C8',
+            padding: '10px 8px', marginBottom: 12, overflowX: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', minWidth: 'max-content' }}>
+              <PipelineStep label="Ingresados"    count={stats.ingresados}     estado="INGRESADO"          activo={filtroEstado} onToggle={toggleFiltro} />
+              <PipelineArr />
+              <PipelineStep label="Confirmados"   count={stats.confirmados}    estado="CONFIRMADO"         activo={filtroEstado} onToggle={toggleFiltro} />
+              <PipelineArr />
+              <PipelineStep label="Cita agendada" count={stats.agendados}      estado="EN_CITA"            activo={filtroEstado} onToggle={toggleFiltro} />
+              <PipelineArr />
+              <PipelineStep label="Cita OK"       count={stats.citaConfirmada} estado="CITA_CONFIRMADA"    activo={filtroEstado} onToggle={toggleFiltro} />
+              <PipelineArr />
+              <PipelineStep label="GM Solic."     count={stats.gmSolicitada}   estado="GM_SOLICITADA"      activo={filtroEstado} onToggle={toggleFiltro} />
+              <PipelineArr />
+              <PipelineStep label="GM Levant."    count={stats.gmLevantada}    estado="GM_LEVANTADA"       activo={filtroEstado} onToggle={toggleFiltro} />
+              <PipelineArr />
+              <PipelineStep label="Firmados"      count={stats.firmados}       estado="FIRMADO"            activo={filtroEstado} onToggle={toggleFiltro} />
+            </div>
+          </div>
+
+          {/* Indicador de actualización silenciosa */}
+          {actualizando && (
+            <div style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginBottom: 4 }}>
+              Actualizando...
+            </div>
+          )}
 
           {/* Buscador */}
           <div style={{ marginBottom: 12, position: 'relative' }}>
@@ -317,27 +358,53 @@ export default function VentasSegundaPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// MetricCard
+// AlertCard — card grande para estados que requieren atención
 // ─────────────────────────────────────────────────────────────────
-function MetricCard({ label, count, color, estado, activo, onToggle }) {
+function AlertCard({ label, count, color, borderColor, estado, activo, onToggle }) {
   const isActive = activo === estado
   return (
-    <div onClick={() => onToggle(estado)}
-      style={{
-        background:   isActive ? color + '12' : 'white',
-        border:       isActive ? `2px solid ${color}` : '1.5px solid #D9D4C8',
-        borderRadius: 12,
-        padding:      isActive ? '13px 15px' : '14px 16px',
-        cursor:       'pointer',
-        transition:   'border 0.12s, background 0.12s',
-      }}>
-      <div style={{ fontSize: 36, fontWeight: 700, color: '#1A2238', lineHeight: 1.1 }}>{count}</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color, marginTop: 6,
-        letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+    <div onClick={() => onToggle(estado)} style={{
+      flex: 1,
+      background:   isActive ? color + '12' : 'white',
+      border:       `1.5px solid ${isActive ? color : borderColor}`,
+      borderRadius: 12,
+      padding:      '12px 14px',
+      cursor:       'pointer',
+      transition:   'border 0.12s, background 0.12s',
+    }}>
+      <div style={{ fontSize: 32, fontWeight: 700, color: '#1A2238', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: 9, fontWeight: 700, color, textTransform: 'uppercase',
+        letterSpacing: '0.06em', marginTop: 5 }}>
+        ● {label}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PipelineStep + PipelineArr — pipeline strip
+// ─────────────────────────────────────────────────────────────────
+function PipelineStep({ label, count, estado, activo, onToggle }) {
+  const isActive = activo === estado
+  return (
+    <div onClick={() => onToggle(estado)} style={{
+      textAlign:    'center',
+      padding:      '4px 10px',
+      borderRadius: 8,
+      cursor:       'pointer',
+      background:   isActive ? '#EFF6FF' : 'transparent',
+      transition:   'background 0.12s',
+    }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1A2238' }}>{count}</div>
+      <div style={{ fontSize: 8, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase',
+        letterSpacing: '0.04em', marginTop: 2, whiteSpace: 'nowrap' }}>
         {label}
       </div>
     </div>
   )
+}
+function PipelineArr() {
+  return <span style={{ color: '#D9D4C8', fontSize: 16, padding: '0 1px', userSelect: 'none' }}>›</span>
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -414,7 +481,7 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
           return (
             <>
               <BloqueTurno
-                label={esSabado ? 'Sábado — 09:15 a 11:45' : 'Turno mañana — 09:15 a 12:45'}
+                label={esSabado ? 'Sábado — 09:15 a 11:45' : 'Turno mañana — 09:15 a 12:30'}
                 slots={esSabado ? SLOTS_SAB : SLOTS_MANANA}
                 mapaHora={mapaHora}
               />
@@ -423,12 +490,12 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 6px' }}>
                     <div style={{ flex: 1, borderTop: '1px dashed #D1D5DB' }} />
                     <span style={{ fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap' }}>
-                      Refrigerio 12:45 – 14:15
+                      Refrigerio 12:30 – 14:15
                     </span>
                     <div style={{ flex: 1, borderTop: '1px dashed #D1D5DB' }} />
                   </div>
                   <BloqueTurno
-                    label="Turno tarde — 14:15 a 16:45"
+                    label="Turno tarde — 14:15 a 16:30"
                     slots={SLOTS_TARDE}
                     mapaHora={mapaHora}
                   />
