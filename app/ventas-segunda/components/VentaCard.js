@@ -74,12 +74,13 @@ const AREA_NOMBRE = {
   legal:     'LEGAL',
 }
 
-// Extrae área y texto de una observación guardada como "[ÁREA] texto"
+// Extrae área, estado previo y texto de una observación guardada como
+// "[ÁREA][PREVIO:estado] texto"
 function parsearObservacion(obs) {
-  if (!obs) return { area: '', texto: '' }
-  const m = obs.match(/^\[([^\]]+)\]\s*(.*)/)
-  if (m) return { area: m[1], texto: m[2] }
-  return { area: '', texto: obs }
+  if (!obs) return { area: '', previo: '', texto: '' }
+  const m = obs.match(/^\[([^\]]+)\](?:\[PREVIO:([^\]]*)\])?\s*(.*)$/)
+  if (m) return { area: m[1], previo: m[2] || '', texto: m[3] }
+  return { area: '', previo: '', texto: obs }
 }
 
 // ── Componente principal ─────────────────────────────────────
@@ -90,7 +91,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const permisos = getPermisos(rol)
 
   // Texto de situación al pie del card
-  const { area: areaObs, texto: textoObs } = parsearObservacion(venta.OBSERVACION_DOCS)
+  const { area: areaObs, previo: estadoPrevioObs, texto: textoObs } = parsearObservacion(venta.OBSERVACION_DOCS)
   const descripcionEstado = estado === 'DOCS_OBSERVADOS'
     ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
     : (ESTADO_DESCRIPCION[estado] || '')
@@ -133,12 +134,13 @@ export default function VentaCard({ venta, rol, onActualizar }) {
 
   // ── Acciones ───────────────────────────────────────────────
   const confirmarANotaria = () => llamarAPI({ action: 'confirmar_a_notaria' })
-  const confirmarCitaAct  = () => llamarAPI({ action: 'confirmar_cita' })
-  const solicitarGM       = () => llamarAPI({ action: 'solicitar_gm' })
-  const levantarGM        = () => llamarAPI({ action: 'levantar_gm' })
-  const firmar            = () => llamarAPI({ action: 'firmar' })
-  const inscribir         = () => llamarAPI({ action: 'inscribir' })
-  const resolverObs       = () => llamarAPI({ action: 'resolver_obs' })
+  const confirmarCitaAct    = () => llamarAPI({ action: 'confirmar_cita' })
+  const solicitarGM         = () => llamarAPI({ action: 'solicitar_gm' })
+  const levantarGM          = () => llamarAPI({ action: 'levantar_gm' })
+  const firmar              = () => llamarAPI({ action: 'firmar' })
+  const inscribir           = () => llamarAPI({ action: 'inscribir' })
+  const marcarSubsanado     = () => llamarAPI({ action: 'marcar_subsanado' })
+  const confirmarSubsanacion = () => llamarAPI({ action: 'confirmar_subsanacion', area: AREA_NOMBRE[rol] || '' })
 
   const agendarCita = () => {
     if (!validarAnticipacionCita(fechaCita, horaCita)) return
@@ -236,6 +238,13 @@ export default function VentaCard({ venta, rol, onActualizar }) {
           {/* ── ACCIONES POR ROL ─────────────────────────── */}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
+            {/* COMERCIAL — marcar subsanado en DOCS_OBSERVADOS */}
+            {!rol && estado === 'DOCS_OBSERVADOS' && (
+              <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E">
+                📋 Documentos subsanados
+              </Btn>
+            )}
+
             {/* COMERCIAL — agendar/reagendar en CONFIRMADO o PENDIENTE_REAGENDA */}
             {!rol && (estado === 'CONFIRMADO' || estado === 'PENDIENTE_REAGENDA') && (
               <>
@@ -297,8 +306,15 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
                 )}
-                {estado === 'DOCS_OBSERVADOS' && puedeAccion('resolver_obs') && (
-                  <Btn onClick={resolverObs} disabled={cargando} color="#065F46" small>Resolver obs.</Btn>
+                {/* Marcar subsanado — disponible cuando está en DOCS_OBSERVADOS */}
+                {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
+                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
+                )}
+                {/* Confirmar subsanación — solo si Tesorería fue quien observó */}
+                {estado === 'DOCS_SUBSANADOS' && areaObs === 'TESORERÍA' && puedeAccion('confirmar_subsanacion') && (
+                  <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
+                    ✅ Confirmar subsanación
+                  </Btn>
                 )}
               </div>
             )}
@@ -331,8 +347,13 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
                 )}
-                {estado === 'DOCS_OBSERVADOS' && puedeAccion('resolver_obs') && (
-                  <Btn onClick={resolverObs} disabled={cargando} color="#065F46" small>Resolver obs.</Btn>
+                {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
+                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
+                )}
+                {estado === 'DOCS_SUBSANADOS' && areaObs === 'NOTARÍA' && puedeAccion('confirmar_subsanacion') && (
+                  <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
+                    ✅ Confirmar subsanación
+                  </Btn>
                 )}
               </div>
             )}
@@ -349,8 +370,13 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
                 )}
-                {estado === 'DOCS_OBSERVADOS' && puedeAccion('resolver_obs') && (
-                  <Btn onClick={resolverObs} disabled={cargando} color="#065F46" small>Resolver obs.</Btn>
+                {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
+                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
+                )}
+                {estado === 'DOCS_SUBSANADOS' && areaObs === 'LEGAL' && puedeAccion('confirmar_subsanacion') && (
+                  <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
+                    ✅ Confirmar subsanación
+                  </Btn>
                 )}
               </div>
             )}
