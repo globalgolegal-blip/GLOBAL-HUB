@@ -121,6 +121,7 @@ export default function VentasSegundaPage() {
     agendados:      count('EN_CITA'),
     citaConfirmada: count('CITA_CONFIRMADA'),
     docsObservados: count('DOCS_OBSERVADOS'),
+    docsSubsanados: count('DOCS_SUBSANADOS'),
     reagendar:      count('PENDIENTE_REAGENDA'),
     gmSolicitada:   count('GM_SOLICITADA'),
     gmLevantada:    count('GM_LEVANTADA'),
@@ -255,6 +256,11 @@ export default function VentasSegundaPage() {
               label="DOCS OBSERVADOS" count={stats.docsObservados}
               color="#DC2626" borderColor="#FCA5A5"
               estado="DOCS_OBSERVADOS" activo={filtroEstado} onToggle={toggleFiltro}
+            />
+            <AlertCard
+              label="SUBSANADOS" count={stats.docsSubsanados}
+              color="#065F46" borderColor="#6EE7B7"
+              estado="DOCS_SUBSANADOS" activo={filtroEstado} onToggle={toggleFiltro}
             />
             <AlertCard
               label="REAGENDAS" count={stats.reagendar}
