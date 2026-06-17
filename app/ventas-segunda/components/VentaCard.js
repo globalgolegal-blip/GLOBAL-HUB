@@ -83,6 +83,11 @@ function parsearObservacion(obs) {
   return { area: '', previo: '', texto: obs }
 }
 
+// Valida que un valor contenga únicamente dígitos y no esté vacío
+function soloDigitos(v) {
+  return /^\d+$/.test(String(v || '').trim())
+}
+
 // ── Componente principal ─────────────────────────────────────
 
 export default function VentaCard({ venta, rol, onActualizar }) {
@@ -90,22 +95,44 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
 
-  // Texto de situación al pie del card
+  // Observación de documentos
   const { area: areaObs, previo: estadoPrevioObs, texto: textoObs } = parsearObservacion(venta.OBSERVACION_DOCS)
+
+  // Observación de contenido (datos del formulario) — siempre de LEGAL
+  const { texto: textoContObs } = parsearObservacion(venta.OBSERVACION_CONTENIDO)
+
+  // Validación automática: DNI y teléfono deben contener solo dígitos
+  const telefonoInvalido = !soloDigitos(venta.TELEFONO)
+  const dniInvalido      = !soloDigitos(venta.DNI)
+  const datosInvalidos   = telefonoInvalido || dniInvalido
+
+  // Texto de situación al pie del card
   const descripcionEstado = estado === 'DOCS_OBSERVADOS'
     ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
+    : estado === 'CONTENIDO_OBSERVADO'
+    ? 'Datos observados por Legal — Comercial debe corregir'
     : (ESTADO_DESCRIPCION[estado] || '')
 
   const [expandido,       setExpandido]       = useState(false)
   const [cargando,        setCargando]        = useState(false)
   const [agendaOpen,      setAgendaOpen]      = useState(false)
   const [obsOpen,         setObsOpen]         = useState(false)
+  const [contObsOpen,     setContObsOpen]     = useState(false)
   const [fechaCita,       setFechaCita]       = useState('')
   const [horaCita,        setHoraCita]        = useState('')
   const [obsTexto,        setObsTexto]        = useState('')
+  const [contObsTexto,    setContObsTexto]    = useState('')
   const [msg,             setMsg]             = useState(null)
   const [subiendoBoleta,      setSubiendoBoleta]      = useState(false)
   const [subiendoSubsanacion, setSubiendoSubsanacion] = useState(false)
+  // Edición de datos por Comercial (auto-detección o Legal-observado)
+  const [editDatosOpen,  setEditDatosOpen]  = useState(false)
+  const [editNombre,     setEditNombre]     = useState(venta.NOMBRE)
+  const [editDni,        setEditDni]        = useState(venta.DNI)
+  const [editTelefono,   setEditTelefono]   = useState(venta.TELEFONO)
+  const [editSC,         setEditSC]         = useState(venta.SOCIEDAD_CONYUGAL || 'No')
+  const [editNomConyuge, setEditNomConyuge] = useState(venta.NOMBRE_CONYUGE || '')
+  const [editDniConyuge, setEditDniConyuge] = useState(venta.DNI_CONYUGE || '')
   const fileRef     = useRef(null)
   const fileRefSubs = useRef(null)
 
@@ -128,6 +155,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
       setMsg({ tipo: 'ok', texto: 'Actualizado correctamente.' })
       setAgendaOpen(false)
       setObsOpen(false)
+      setContObsOpen(false)
       setTimeout(() => { setMsg(null); onActualizar?.() }, 1200)
     } catch (e) {
       setMsg({ tipo: 'err', texto: e.message })
@@ -155,6 +183,35 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     if (!obsTexto.trim()) return
     const area = AREA_NOMBRE[rol] || ''
     llamarAPI({ action: 'observar_docs', obs: obsTexto.trim(), area })
+  }
+
+  const enviarObsContenido = () => {
+    if (!contObsTexto.trim()) return
+    llamarAPI({ action: 'observar_contenido', obs: contObsTexto.trim() })
+  }
+
+  const corregirContenido = () => {
+    if (!editNombre.trim())
+      return setMsg({ tipo: 'err', texto: 'El nombre no puede estar vacío.' })
+    if (!soloDigitos(editDni))
+      return setMsg({ tipo: 'err', texto: 'El DOI/DNI debe contener solo dígitos.' })
+    if (!soloDigitos(editTelefono))
+      return setMsg({ tipo: 'err', texto: 'El teléfono debe contener solo dígitos.' })
+    if (editSC === 'Sí') {
+      if (!editNomConyuge.trim())
+        return setMsg({ tipo: 'err', texto: 'El nombre del cónyuge es requerido.' })
+      if (!soloDigitos(editDniConyuge))
+        return setMsg({ tipo: 'err', texto: 'El DOI del cónyuge debe contener solo dígitos.' })
+    }
+    llamarAPI({
+      action:         'subsanar_contenido',
+      nombre:         editNombre.trim(),
+      dni:            editDni.trim(),
+      telefono:       editTelefono.trim(),
+      sc:             editSC,
+      nombre_conyuge: editSC === 'Sí' ? editNomConyuge.trim() : '',
+      dni_conyuge:    editSC === 'Sí' ? editDniConyuge.trim()  : '',
+    })
   }
 
   const subirBoleta = async (file) => {
@@ -241,12 +298,18 @@ export default function VentaCard({ venta, rol, onActualizar }) {
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '12px 14px', cursor: 'pointer', userSelect: 'none' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 700, fontSize: 15, color: NAVY }}>{venta.PLACA}</span>
             <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
               color: cfg.colorText, background: cfg.bgBadge, border: `1px solid ${cfg.borderBadge}` }}>
               {cfg.labelCorto}
             </span>
+            {datosInvalidos && estado !== 'CONTENIDO_OBSERVADO' && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
+                color: '#5B21B6', background: '#EDE9FE', border: '1px solid #A78BFA' }}>
+                ⚠ Datos inválidos
+              </span>
+            )}
           </div>
           <span style={{ fontSize: 12, color: '#6B7280' }}>{venta.NOMBRE}</span>
           {descripcionEstado ? (
@@ -265,12 +328,22 @@ export default function VentaCard({ venta, rol, onActualizar }) {
 
           {/* Datos básicos */}
           <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-            <InfoRow label="DNI/CE"   value={venta.DNI} />
-            <InfoRow label="Teléfono" value={venta.TELEFONO} />
+            <InfoRow label="DNI/CE"   value={venta.DNI   || '(vacío)'} warn={dniInvalido} />
+            <InfoRow label="Teléfono" value={venta.TELEFONO || '(vacío)'} warn={telefonoInvalido} />
             {venta.FECHA_CITA && (
               <InfoRow label="Cita" value={`${venta.FECHA_CITA} ${venta.HORA_CITA || ''}`.trim()} />
             )}
             {venta.SIN_CITA && <InfoRow label="Sin cita" value="Sí — directo a firma" />}
+            {dniInvalido && (
+              <div style={{ gridColumn: '1/-1', fontSize: 11, color: '#5B21B6', fontWeight: 500 }}>
+                ⚠ DNI/CE inválido — debe contener solo dígitos
+              </div>
+            )}
+            {telefonoInvalido && (
+              <div style={{ gridColumn: '1/-1', fontSize: 11, color: '#5B21B6', fontWeight: 500 }}>
+                ⚠ Teléfono inválido — debe contener solo dígitos
+              </div>
+            )}
             {venta.OBSERVACION_DOCS && (
               <div style={{ gridColumn: '1/-1' }}>
                 {areaObs
@@ -279,7 +352,11 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                 }
               </div>
             )}
-
+            {venta.OBSERVACION_CONTENIDO && (
+              <div style={{ gridColumn: '1/-1' }}>
+                <InfoRow label="Obs. datos (LEGAL)" value={textoContObs} warn />
+              </div>
+            )}
           </div>
 
           {/* Documentos del comprador */}
@@ -327,6 +404,156 @@ export default function VentaCard({ venta, rol, onActualizar }) {
 
           {/* ── ACCIONES POR ROL ─────────────────────────── */}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+            {/* COMERCIAL — corrección de datos:
+                  · Auto-detección: DOI o teléfono inválidos → acceso directo sin Legal
+                  · Legal-observado: estado CONTENIDO_OBSERVADO → también muestra la observación */}
+            {!rol && (datosInvalidos || estado === 'CONTENIDO_OBSERVADO') && (
+              <div>
+                {/* Cabecera con botón para abrir/cerrar */}
+                {!editDatosOpen ? (
+                  <Btn
+                    onClick={() => setEditDatosOpen(true)}
+                    color="#5B21B6"
+                  >
+                    {estado === 'CONTENIDO_OBSERVADO'
+                      ? '✏️ Corregir datos — solicitado por Legal'
+                      : '✏️ Corregir datos inválidos'}
+                  </Btn>
+                ) : (
+                  <div style={{ background: '#F5F3FF', border: '1px solid #A78BFA',
+                    borderRadius: 8, padding: 12 }}>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between',
+                      alignItems: 'center', marginBottom: 8 }}>
+                      <p style={{ fontSize: 12, color: '#5B21B6', margin: 0, fontWeight: 700 }}>
+                        ✏️ Corrección de datos del expediente
+                      </p>
+                      <button onClick={() => setEditDatosOpen(false)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer',
+                          color: '#9CA3AF', fontSize: 16, padding: 0, lineHeight: 1 }}>✕</button>
+                    </div>
+
+                    {/* Observación de Legal si existe */}
+                    {textoContObs && (
+                      <p style={{ fontSize: 11, color: '#374151', margin: '0 0 10px',
+                        background: '#EDE9FE', borderRadius: 4, padding: '5px 8px',
+                        border: '1px solid #C4B5FD' }}>
+                        📋 Legal indica: {textoContObs}
+                      </p>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                      {/* Nombre */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
+                          textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>
+                          Nombre completo
+                        </label>
+                        <input value={editNombre}
+                          onChange={e => setEditNombre(e.target.value)}
+                          placeholder="Nombre completo del comprador"
+                          style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+                      </div>
+
+                      {/* DOI */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
+                          textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>
+                          DOI / DNI / CE <span style={{ color: '#DC2626', textTransform: 'none' }}>(solo dígitos)</span>
+                        </label>
+                        <input value={editDni}
+                          onChange={e => setEditDni(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Ej: 12345678"
+                          inputMode="numeric"
+                          style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+                      </div>
+
+                      {/* Teléfono */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
+                          textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>
+                          Teléfono <span style={{ color: '#DC2626', textTransform: 'none' }}>(solo dígitos)</span>
+                        </label>
+                        <input value={editTelefono}
+                          onChange={e => setEditTelefono(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Ej: 987654321"
+                          inputMode="numeric"
+                          style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+                      </div>
+
+                      {/* Sociedad Conyugal */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
+                          textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>
+                          ¿El comprador está casado?
+                        </label>
+                        <select value={editSC} onChange={e => setEditSC(e.target.value)}
+                          style={{ ...inputStyle, width: '100%', boxSizing: 'border-box',
+                            background: 'white' }}>
+                          <option value="No">No</option>
+                          <option value="Sí">Sí</option>
+                        </select>
+                      </div>
+
+                      {/* Campos del cónyuge — solo si SC = Sí */}
+                      {editSC === 'Sí' && (
+                        <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA',
+                          borderRadius: 6, padding: 10, display: 'flex',
+                          flexDirection: 'column', gap: 6 }}>
+                          <p style={{ fontSize: 10, color: '#92400E', margin: 0,
+                            fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            👫 Datos del cónyuge
+                          </p>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
+                              textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>
+                              Nombre del cónyuge
+                            </label>
+                            <input value={editNomConyuge}
+                              onChange={e => setEditNomConyuge(e.target.value)}
+                              placeholder="Nombre completo del cónyuge"
+                              style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
+                              textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>
+                              DOI / DNI del cónyuge <span style={{ color: '#DC2626', textTransform: 'none' }}>(solo dígitos)</span>
+                            </label>
+                            <input value={editDniConyuge}
+                              onChange={e => setEditDniConyuge(e.target.value.replace(/\D/g, ''))}
+                              placeholder="Ej: 87654321"
+                              inputMode="numeric"
+                              style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Botón de envío */}
+                    <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                      <Btn
+                        onClick={corregirContenido}
+                        disabled={
+                          !editNombre.trim() ||
+                          !soloDigitos(editDni) ||
+                          !soloDigitos(editTelefono) ||
+                          (editSC === 'Sí' && (!editNomConyuge.trim() || !soloDigitos(editDniConyuge))) ||
+                          cargando
+                        }
+                        color="#5B21B6"
+                      >
+                        {cargando ? 'Guardando…' : '✅ Enviar corrección'}
+                      </Btn>
+                      <Btn onClick={() => setEditDatosOpen(false)} color="#6B7280" small>Cancelar</Btn>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* COMERCIAL — subir documento subsanado en DOCS_OBSERVADOS */}
             {!rol && estado === 'DOCS_OBSERVADOS' && (
@@ -491,10 +718,25 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     ✅ Confirmar subsanación
                   </Btn>
                 )}
+                {/* Observar contenido — disponible cuando no hay observación activa */}
+                {estado !== 'CONTENIDO_OBSERVADO' && !contObsOpen && (
+                  <Btn
+                    onClick={() => {
+                      const issues = []
+                      if (dniInvalido)      issues.push(`DNI/CE "${venta.DNI || '(vacío)'}" no es válido — solo dígitos`)
+                      if (telefonoInvalido) issues.push(`Teléfono "${venta.TELEFONO || '(vacío)'}" no es válido — solo dígitos`)
+                      setContObsTexto(issues.join('. '))
+                      setContObsOpen(true)
+                    }}
+                    color="#5B21B6" small
+                  >
+                    {datosInvalidos ? '⚠ Observar datos inválidos' : '📝 Observar contenido'}
+                  </Btn>
+                )}
               </div>
             )}
 
-            {/* Modal de observación */}
+            {/* Modal de observación de documentos */}
             {obsOpen && (
               <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA',
                 borderRadius: 8, padding: 10 }}>
@@ -511,6 +753,30 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     Guardar
                   </Btn>
                   <Btn onClick={() => setObsOpen(false)} color="#6B7280" small>Cancelar</Btn>
+                </div>
+              </div>
+            )}
+
+            {/* Modal de observación de contenido — solo Legal */}
+            {contObsOpen && (
+              <div style={{ background: '#F5F3FF', border: '1px solid #A78BFA',
+                borderRadius: 8, padding: 10 }}>
+                <p style={{ fontSize: 12, color: '#5B21B6', margin: '0 0 4px', fontWeight: 700 }}>
+                  Observación de datos del formulario
+                </p>
+                <p style={{ fontSize: 11, color: '#6B7280', margin: '0 0 8px' }}>
+                  Comercial podrá corregir Nombre, DNI y Teléfono una vez notificado.
+                </p>
+                <textarea value={contObsTexto} onChange={e => setContObsTexto(e.target.value)}
+                  placeholder="Ej: DNI vacío, teléfono contiene letras, nombre incompleto…"
+                  rows={3}
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #C4B5FD',
+                    borderRadius: 6, padding: '7px 10px', fontSize: 12, resize: 'vertical', outline: 'none' }} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <Btn onClick={enviarObsContenido} disabled={!contObsTexto.trim() || cargando} color="#5B21B6">
+                    Registrar observación
+                  </Btn>
+                  <Btn onClick={() => setContObsOpen(false)} color="#6B7280" small>Cancelar</Btn>
                 </div>
               </div>
             )}
