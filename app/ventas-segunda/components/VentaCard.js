@@ -208,20 +208,37 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                 }
               </div>
             )}
-            {venta.OBSERVACIONES && (
-              <div style={{ gridColumn: '1/-1' }}>
-                <InfoRow label="Historial" value={venta.OBSERVACIONES} small />
-              </div>
-            )}
+
           </div>
 
-          {/* Documentos — solo tesorería, notaría, legal */}
+          {/* Documentos del comprador */}
           {permisos.verDocumentos && (
             <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               <LinkDoc url={venta.PAGO_VEHICULO}   label="Pago vehículo"   />
               <LinkDoc url={venta.FOTO_DNI_ANV}    label="DNI Anverso"     />
               <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
+            </div>
+          )}
+
+          {/* Sociedad Conyugal — visible si aplica */}
+          {venta.SOCIEDAD_CONYUGAL === 'Sí' && (
+            <div style={{ marginTop: 10, background: '#FFF7ED', border: '1px solid #FED7AA',
+              borderRadius: 8, padding: '8px 12px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#92400E',
+                textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                👫 Sociedad Conyugal
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 12px' }}>
+                <InfoRow label="Cónyuge"   value={venta.NOMBRE_CONYUGE} />
+                <InfoRow label="DNI/CE"    value={venta.DNI_CONYUGE} />
+              </div>
+              {permisos.verDocumentos && (
+                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <LinkDoc url={venta.FOTO_DNI_CONYUGE_ANV} label="DNI Cónyuge Anv." />
+                  <LinkDoc url={venta.FOTO_DNI_CONYUGE_REV} label="DNI Cónyuge Rev." />
+                </div>
+              )}
             </div>
           )}
 
