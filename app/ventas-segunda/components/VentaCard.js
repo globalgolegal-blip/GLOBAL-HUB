@@ -631,9 +631,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     ✅ Confirmar a Notaría
                   </Btn>
                 )}
-                {venta.FECHA_FIRMA && !venta.FECHA_INSCRIPCION && puedeAccion('inscribir') && (
-                  <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small>Inscribir RRPP</Btn>
-                )}
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
                 )}
@@ -706,6 +703,10 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                   <Btn onClick={levantarGM} disabled={cargando} color="#065F46">
                     ✅ GM Levantada
                   </Btn>
+                )}
+                {/* Inscripción en RRPP — Legal inscribe luego de que Notaría firmó */}
+                {venta.FECHA_FIRMA && !venta.FECHA_INSCRIPCION && puedeAccion('inscribir') && (
+                  <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small>📋 Inscribir RRPP</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
