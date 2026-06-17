@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { autenticarVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
-import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../lib/ventas-segunda/utils'
+import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
 
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
@@ -55,9 +55,9 @@ export default function VentasSegundaPage() {
   const [actualizando, setActualizando] = useState(false)
   const [errorData, setErrorData]       = useState(null)
   const [ultimaAct, setUltimaAct]       = useState(null)
-  const [busqueda, setBusqueda]         = useState('')
-  const [filtroEstado, setFiltroEstado] = useState(null)
-  const [vista, setVista]               = useState('lista')   // 'lista' | 'agenda'
+  const [busqueda, setBusqueda]           = useState('')
+  const [filtroEstado, setFiltroEstado]   = useState(null)
+  const [vista, setVista]                 = useState('lista')   // 'lista' | 'agenda'
   const [fechaAgenda, setFechaAgenda]   = useState(formatFechaLocal(new Date()))
 
   const cargarVentas = useCallback(async (esInicial = false) => {
@@ -111,9 +111,16 @@ export default function VentasSegundaPage() {
   const count = (e) => estados.filter(x => x === e).length
 
   const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
-  const ventasFiltradas = filtroEstado
-    ? ventas.filter((_, i) => estados[i] === filtroEstado)
+
+  // Cuando hay rol activo → vista única de pendientes; sin rol → todas las ventas
+  const ventasBase = usuario?.rol
+    ? ventas.filter(v => tienePendienteParaRol(v, usuario.rol))
     : ventas
+
+  // Filtro de estado del pipeline (encima de la base)
+  const ventasFiltradas = filtroEstado
+    ? ventasBase.filter(v => derivarEstadoVS(v) === filtroEstado)
+    : ventasBase
 
   const stats = {
     ingresados:     count('INGRESADO'),
