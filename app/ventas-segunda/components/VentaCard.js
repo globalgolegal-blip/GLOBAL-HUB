@@ -104,8 +104,10 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const [horaCita,        setHoraCita]        = useState('')
   const [obsTexto,        setObsTexto]        = useState('')
   const [msg,             setMsg]             = useState(null)
-  const [subiendoBoleta,  setSubiendoBoleta]  = useState(false)
-  const fileRef = useRef(null)
+  const [subiendoBoleta,      setSubiendoBoleta]      = useState(false)
+  const [subiendoSubsanacion, setSubiendoSubsanacion] = useState(false)
+  const fileRef     = useRef(null)
+  const fileRefSubs = useRef(null)
 
   const puedeAccion = (accion) => permisos.acciones.includes(accion)
 
@@ -189,6 +191,39 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     }
   }
 
+  const subirSubsanacion = async (file) => {
+    if (!file || !VS_URL) return
+    setSubiendoSubsanacion(true)
+    setMsg(null)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = (e) => resolve(e.target.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      await fetch(VS_URL, {
+        method:  'POST',
+        mode:    'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body:    JSON.stringify({
+          action:     'subir_subsanacion',
+          row:        venta._idx,
+          placa:      venta.PLACA,
+          fileBase64: base64,
+          mimeType:   file.type,
+        }),
+      })
+      setMsg({ tipo: 'ok', texto: '✅ Documento enviado — se verá al próximo refresco.' })
+      setTimeout(() => { setMsg(null); onActualizar?.() }, 3000)
+    } catch (e) {
+      setMsg({ tipo: 'err', texto: 'Error al subir: ' + e.message })
+    } finally {
+      setSubiendoSubsanacion(false)
+      if (fileRefSubs.current) fileRefSubs.current.value = ''
+    }
+  }
+
   const rangoValido        = validarRangoHorario(horaCita, fechaCita || null)
   const anticipacionValida = validarAnticipacionCita(fechaCita, horaCita)
   const reglaDiaAnterior   = validarReglaDiaAnterior(fechaCita, horaCita)
@@ -254,7 +289,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
               <LinkDoc url={venta.FOTO_DNI_ANV}    label="DNI Anverso"     />
               <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
-              <LinkDoc url={venta.BOLETA_URL}      label="Boleta VS"       />
+              <LinkDoc url={venta.BOLETA_URL}       label="Boleta VS"        />
+              <LinkDoc url={venta.SUBSANACION_URL}  label="Doc subsanado"    />
             </div>
           )}
 
@@ -292,11 +328,25 @@ export default function VentaCard({ venta, rol, onActualizar }) {
           {/* ── ACCIONES POR ROL ─────────────────────────── */}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-            {/* COMERCIAL — marcar subsanado en DOCS_OBSERVADOS */}
+            {/* COMERCIAL — subir documento subsanado en DOCS_OBSERVADOS */}
             {!rol && estado === 'DOCS_OBSERVADOS' && (
-              <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E">
-                📋 Documentos subsanados
-              </Btn>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Btn onClick={() => fileRefSubs.current?.click()} disabled={subiendoSubsanacion} color="#0F766E">
+                  {subiendoSubsanacion ? 'Subiendo…' : venta.SUBSANACION_URL ? '🔄 Reemplazar doc subsanado' : '📤 Subir documento subsanado'}
+                </Btn>
+                <input
+                  ref={fileRefSubs}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg,application/pdf"
+                  style={{ display: 'none' }}
+                  onChange={e => { if (e.target.files?.[0]) subirSubsanacion(e.target.files[0]) }}
+                />
+                {venta.SUBSANACION_URL && (
+                  <p style={{ fontSize: 11, color: '#6B7280', margin: 0 }}>
+                    Documento ya enviado — el área revisará y confirmará.
+                  </p>
+                )}
+              </div>
             )}
 
             {/* COMERCIAL — agendar/reagendar en CONFIRMADO o PENDIENTE_REAGENDA */}
