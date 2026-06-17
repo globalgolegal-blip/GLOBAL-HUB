@@ -3,7 +3,7 @@
 // Campos del objeto venta siguen la convención MAYÚSCULAS de parseSheets.js.
 // El índice de fila se lee de venta._idx (pasado por VentaList).
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   derivarEstadoVS,
   ESTADO_CONFIG_VS,
@@ -96,14 +96,16 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
     : (ESTADO_DESCRIPCION[estado] || '')
 
-  const [expandido,  setExpandido]  = useState(false)
-  const [cargando,   setCargando]   = useState(false)
-  const [agendaOpen, setAgendaOpen] = useState(false)
-  const [obsOpen,    setObsOpen]    = useState(false)
-  const [fechaCita,  setFechaCita]  = useState('')
-  const [horaCita,   setHoraCita]   = useState('')
-  const [obsTexto,   setObsTexto]   = useState('')
-  const [msg,        setMsg]        = useState(null)
+  const [expandido,       setExpandido]       = useState(false)
+  const [cargando,        setCargando]        = useState(false)
+  const [agendaOpen,      setAgendaOpen]      = useState(false)
+  const [obsOpen,         setObsOpen]         = useState(false)
+  const [fechaCita,       setFechaCita]       = useState('')
+  const [horaCita,        setHoraCita]        = useState('')
+  const [obsTexto,        setObsTexto]        = useState('')
+  const [msg,             setMsg]             = useState(null)
+  const [subiendoBoleta,  setSubiendoBoleta]  = useState(false)
+  const fileRef = useRef(null)
 
   const puedeAccion = (accion) => permisos.acciones.includes(accion)
 
@@ -151,6 +153,40 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     if (!obsTexto.trim()) return
     const area = AREA_NOMBRE[rol] || ''
     llamarAPI({ action: 'observar_docs', obs: obsTexto.trim(), area })
+  }
+
+  const subirBoleta = async (file) => {
+    if (!file || !VS_URL) return
+    setSubiendoBoleta(true)
+    setMsg(null)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = (e) => resolve(e.target.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      // text/plain = simple request → sin preflight CORS
+      await fetch(VS_URL, {
+        method:   'POST',
+        mode:     'no-cors',
+        headers:  { 'Content-Type': 'text/plain' },
+        body:     JSON.stringify({
+          action:      'subir_boleta',
+          row:         venta._idx,
+          placa:       venta.PLACA,
+          fileBase64:  base64,
+          mimeType:    file.type,
+        }),
+      })
+      setMsg({ tipo: 'ok', texto: '✅ Boleta enviada — se verá al próximo refresco.' })
+      setTimeout(() => { setMsg(null); onActualizar?.() }, 3000)
+    } catch (e) {
+      setMsg({ tipo: 'err', texto: 'Error al subir: ' + e.message })
+    } finally {
+      setSubiendoBoleta(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
   const rangoValido        = validarRangoHorario(horaCita, fechaCita || null)
@@ -218,6 +254,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
               <LinkDoc url={venta.FOTO_DNI_ANV}    label="DNI Anverso"     />
               <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
+              <LinkDoc url={venta.BOLETA_URL}      label="Boleta VS"       />
             </div>
           )}
 
@@ -323,16 +360,25 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
                 )}
-                {/* Marcar subsanado — disponible cuando está en DOCS_OBSERVADOS */}
                 {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
                   <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
                 )}
-                {/* Confirmar subsanación — solo si Tesorería fue quien observó */}
                 {estado === 'DOCS_SUBSANADOS' && areaObs === 'TESORERÍA' && puedeAccion('confirmar_subsanacion') && (
                   <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
                     ✅ Confirmar subsanación
                   </Btn>
                 )}
+                {/* Boleta — siempre disponible para Tesorería */}
+                <Btn onClick={() => fileRef.current?.click()} disabled={subiendoBoleta} color="#6D28D9" small>
+                  {subiendoBoleta ? 'Subiendo…' : venta.BOLETA_URL ? '🔄 Reemplazar boleta' : '⬆ Subir boleta'}
+                </Btn>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg,application/pdf"
+                  style={{ display: 'none' }}
+                  onChange={e => { if (e.target.files?.[0]) subirBoleta(e.target.files[0]) }}
+                />
               </div>
             )}
 
