@@ -83,7 +83,9 @@ export default function VentasSegundaPage() {
           const gmData = await resGM.json()
           if (gmData.ok && Array.isArray(gmData.gm)) {
             gmData.gm.forEach(({ placa, estadoRegistral }) => {
-              gmMap.set(placa, estadoRegistral)
+              // Normalizar: quitar guiones y espacios para tolerar "7850-CD" vs "7850CD"
+              const key = (placa || '').replace(/[-\s]/g, '').toUpperCase()
+              gmMap.set(key, estadoRegistral)
             })
           }
         }
@@ -93,7 +95,7 @@ export default function VentasSegundaPage() {
       const ventasBase = parsearVentas(filas)
       const ventasAug  = ventasBase.map(v => ({
         ...v,
-        _gmEstado: gmMap.get((v.PLACA || '').trim().toUpperCase()) ?? null,
+        _gmEstado: gmMap.get((v.PLACA || '').replace(/[-\s]/g, '').toUpperCase()) ?? null,
       }))
 
       setVentas(ventasAug)
