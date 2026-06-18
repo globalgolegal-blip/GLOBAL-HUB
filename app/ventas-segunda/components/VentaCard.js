@@ -124,7 +124,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
 
   // Estado registral del sheet externo de GM
   const gmEstado       = (venta._gmEstado || '').trim().toUpperCase()
-  const enCalificacion = gmEstado === 'EN CALIFICACIÓN'
+  const enCalificacion = gmEstado === 'EN CALIFICACION'
   const enProceso      = gmEstado === 'EN PROCESO'
 
   // Observación de documentos
