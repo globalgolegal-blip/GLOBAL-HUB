@@ -112,9 +112,9 @@ export default function VentasSegundaPage() {
 
   const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
 
-  // Cuando hay rol activo → vista única de pendientes; sin rol → todas las ventas
+  // Cuando hay rol activo → marca cada venta con _pendiente; sin rol → todas las ventas
   const ventasBase = usuario?.rol
-    ? ventas.filter(v => tienePendienteParaRol(v, usuario.rol))
+    ? ventas.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
     : ventas
 
   // Filtro de estado del pipeline (encima de la base)
