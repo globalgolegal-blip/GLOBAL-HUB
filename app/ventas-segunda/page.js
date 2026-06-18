@@ -66,12 +66,37 @@ export default function VentasSegundaPage() {
     else setActualizando(true)
     setErrorData(null)
     try {
-      const res  = await fetch(VS_SCRIPT_URL, { cache: 'no-store' })
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-      const data = await res.json()
+      // Fetch ventas y tabla GM en paralelo
+      const [resVentas, resGM] = await Promise.all([
+        fetch(VS_SCRIPT_URL, { cache: 'no-store' }),
+        fetch(`${VS_SCRIPT_URL}?action=get_gm_table`, { cache: 'no-store' }),
+      ])
+      if (!resVentas.ok) throw new Error(`Error HTTP ${resVentas.status}`)
+      const data = await resVentas.json()
       if (data && data.ok === false) throw new Error(data.error || 'Error en el servidor')
       const filas = Array.isArray(data) ? data : (data.filas || [])
-      setVentas(parsearVentas(filas))
+
+      // Construir mapa PLACA → estadoRegistral desde el sheet externo de GM
+      const gmMap = new Map()
+      try {
+        if (resGM.ok) {
+          const gmData = await resGM.json()
+          if (gmData.ok && Array.isArray(gmData.gm)) {
+            gmData.gm.forEach(({ placa, estadoRegistral }) => {
+              gmMap.set(placa, estadoRegistral)
+            })
+          }
+        }
+      } catch (_) { /* Si falla el fetch GM no bloqueamos la carga principal */ }
+
+      // Augmentar cada venta con _gmEstado (null si la placa no está en el sheet GM)
+      const ventasBase = parsearVentas(filas)
+      const ventasAug  = ventasBase.map(v => ({
+        ...v,
+        _gmEstado: gmMap.get((v.PLACA || '').trim().toUpperCase()) ?? null,
+      }))
+
+      setVentas(ventasAug)
       setUltimaAct(new Date())
     } catch (e) {
       setErrorData(e.message)
