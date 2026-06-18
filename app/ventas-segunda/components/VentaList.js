@@ -57,7 +57,7 @@ export default function VentaList({ ventas, busqueda, rol, onActualizar }) {
             fontSize: 11, fontWeight: 500, color: '#9CA3AF',
             whiteSpace: 'nowrap', letterSpacing: '0.04em',
           }}>
-            Otros contratos
+            Otras solicitudes
           </span>
           <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
         </div>
