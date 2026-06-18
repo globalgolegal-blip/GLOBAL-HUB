@@ -122,6 +122,11 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
 
+  // Estado registral del sheet externo de GM
+  const gmEstado       = (venta._gmEstado || '').trim().toUpperCase()
+  const enCalificacion = gmEstado === 'EN CALIFICACIÓN'
+  const enProceso      = gmEstado === 'EN PROCESO'
+
   // Observación de documentos
   const { area: areaObs, previo: estadoPrevioObs, texto: textoObs } = parsearObservacion(venta.OBSERVACION_DOCS)
 
@@ -133,12 +138,23 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const dniInvalido      = !soloDigitos(venta.DNI)
   const datosInvalidos   = telefonoInvalido || dniInvalido
 
-  // Texto de situación al pie del card
-  const descripcionEstado = estado === 'DOCS_OBSERVADOS'
-    ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
-    : estado === 'CONTENIDO_OBSERVADO'
-    ? 'Datos observados por Legal — Comercial debe corregir'
-    : (ESTADO_DESCRIPCION[estado] || '')
+  // Texto de situación al pie del card — dinámico por gmEstado y estado
+  const descripcionEstado =
+    enProceso
+      ? 'Placa EN PROCESO en registro de garantías — no se pueden realizar acciones'
+      : estado === 'CITA_CONFIRMADA' && enCalificacion
+      ? 'Cita confirmada — EN CALIFICACIÓN: Notaría puede registrar firma directamente'
+      : estado === 'FIRMADO' && enCalificacion
+      ? (!venta.GM_SOLICITADA
+          ? 'Acta firmada — Notaría debe solicitar levantamiento de GM'
+          : !venta.GM_LEVANTADA
+          ? 'Acta firmada — GM solicitada, pendiente levantamiento por Legal'
+          : 'Acta firmada — GM levantada, pendiente inscripción en RRPP')
+      : estado === 'DOCS_OBSERVADOS'
+      ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
+      : estado === 'CONTENIDO_OBSERVADO'
+      ? 'Datos observados por Legal — Comercial debe corregir'
+      : (ESTADO_DESCRIPCION[estado] || '')
 
   const [expandido,       setExpandido]       = useState(false)
   const [cargando,        setCargando]        = useState(false)
@@ -331,6 +347,18 @@ export default function VentaCard({ venta, rol, onActualizar }) {
               color: cfg.colorText, background: cfg.bgBadge, border: `1px solid ${cfg.borderBadge}` }}>
               {cfg.labelCorto}
             </span>
+            {enProceso && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
+                color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                ⛔ EN PROCESO
+              </span>
+            )}
+            {enCalificacion && !enProceso && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
+                color: '#7C3AED', background: '#F5F3FF', border: '1px solid #C4B5FD' }}>
+                📋 EN CALIFICACIÓN
+              </span>
+            )}
             {datosInvalidos && estado !== 'CONTENIDO_OBSERVADO' && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
                 color: '#5B21B6', background: '#EDE9FE', border: '1px solid #A78BFA' }}>
@@ -426,6 +454,20 @@ export default function VentaCard({ venta, rol, onActualizar }) {
               color:      msg.tipo === 'ok' ? '#166534'  : '#991B1B',
               border: `1px solid ${msg.tipo === 'ok' ? '#86EFAC' : '#FECACA'}` }}>
               {msg.texto}
+            </div>
+          )}
+
+          {/* Banner bloqueante — EN PROCESO */}
+          {enProceso && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8,
+              padding: '10px 12px', marginTop: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 3 }}>
+                ⛔ Proceso bloqueado — placa EN PROCESO
+              </div>
+              <div style={{ fontSize: 11, color: '#991B1B', lineHeight: 1.4 }}>
+                La placa figura como EN PROCESO en el registro de garantías mobiliarias.
+                No se pueden realizar acciones hasta que el estado sea actualizado.
+              </div>
             </div>
           )}
 
@@ -616,7 +658,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0',
                     borderRadius: 8, padding: 10 }}>
                     <p style={{ fontSize: 12, color: '#374151', margin: '0 0 8px', fontWeight: 600 }}>
-                      {estado === 'PENDIENTE_REAGENDA' ? 'Reagendar cita' : 'Agendar cita'} — mínimo 2 horas de anticipación
+                      {estado === 'PENDIENTE_REAGENDA' ? 'Reagendar cita' : 'Agendar cita'} — mínimo 1 hora y 30 minutos de anticipación
                     </p>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       <input type="date" value={fechaCita} onChange={e => setFechaCita(e.target.value)}
@@ -631,7 +673,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     )}
                     {fechaCita && horaCita && rangoValido && !anticipacionValida && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ La cita debe agendarse con al menos 2 horas de anticipación.
+                        ⚠ La cita debe agendarse con al menos 1 hora y 30 minutos de anticipación.
                       </p>
                     )}
                     {fechaCita && horaCita && rangoValido && anticipacionValida && !reglaDiaAnterior && (
@@ -651,7 +693,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             )}
 
             {/* TESORERÍA */}
-            {rol === 'tesoreria' && (
+            {rol === 'tesoreria' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'INGRESADO' && puedeAccion('confirmar_a_notaria') && (
                   <Btn onClick={confirmarANotaria} disabled={cargando} color="#0F766E">
@@ -684,7 +726,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             )}
 
             {/* NOTARÍA */}
-            {rol === 'notaria' && (
+            {rol === 'notaria' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'EN_CITA' && puedeAccion('confirmar_cita') && (
                   <div>
@@ -698,15 +740,32 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     )}
                   </div>
                 )}
-                {/* Solicitar GM — cuando la cita está confirmada y aún no hay GM */}
-                {estado === 'CITA_CONFIRMADA' && puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
+                {/* Solicitar GM:
+                    · Flujo normal: solo en CITA_CONFIRMADA
+                    · EN CALIFICACIÓN: en CITA_CONFIRMADA (coexiste con Firmado) y en FIRMADO */}
+                {puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
+                  (estado === 'CITA_CONFIRMADA') ||
+                  (estado === 'FIRMADO' && enCalificacion)
+                ) && (
                   <Btn onClick={solicitarGM} disabled={cargando} color="#7C3AED" small>
                     ⚠ Solicitar levant. GM
                   </Btn>
                 )}
-                {/* Firmar — SOLO cuando GM ha sido levantada (flujo GM siempre obligatorio) */}
-                {estado === 'GM_LEVANTADA' && puedeAccion('firmar') && !venta.FECHA_FIRMA && (
-                  <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small>Registrar firma</Btn>
+                {/* Registrar firma:
+                    · Flujo normal: solo cuando GM_LEVANTADA
+                    · EN CALIFICACIÓN: desde CITA_CONFIRMADA, GM_SOLICITADA o GM_LEVANTADA
+                      (coexiste con Solicitar GM en CITA_CONFIRMADA) */}
+                {puedeAccion('firmar') && !venta.FECHA_FIRMA && (
+                  (!enCalificacion && estado === 'GM_LEVANTADA') ||
+                  (enCalificacion && (
+                    estado === 'CITA_CONFIRMADA' ||
+                    estado === 'GM_SOLICITADA'  ||
+                    estado === 'GM_LEVANTADA'
+                  ))
+                ) && (
+                  <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small>
+                    ✍ Registrar firma
+                  </Btn>
                 )}
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
@@ -723,7 +782,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             )}
 
             {/* LEGAL */}
-            {rol === 'legal' && (
+            {rol === 'legal' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {/* GM pendiente de levantar — Legal responde con este botón */}
                 {venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
