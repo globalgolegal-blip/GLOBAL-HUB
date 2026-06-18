@@ -37,16 +37,43 @@ function Btn({ onClick, disabled, color = NAVY, children, small }) {
   )
 }
 
-function LinkDoc({ url, label }) {
-  if (!url || !url.includes('drive.google.com')) return null
+// Convierte URLs antiguas de Google Drive (?id=FILE_ID) al formato actual (/file/d/FILE_ID/view)
+function normalizarDriveUrl(url) {
+  if (!url) return url
+  const match = url.match(/[?&]id=([^&]+)/)
+  if (match) return `https://drive.google.com/file/d/${match[1]}/view`
+  return url
+}
+
+function LinkDoc({ url, label, highlight }) {
+  if (!url) return null
+
+  // Separa por coma o salto de línea — maneja 1 o N archivos por celda
+  const urls = url
+    .split(/,|\n/)
+    .map(u => u.trim())
+    .filter(u => u.includes('drive.google.com'))
+
+  if (urls.length === 0) return null
+
+  const estiloLink = {
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    fontSize: 12, textDecoration: 'none', borderRadius: 6, padding: '3px 8px',
+    color:      highlight ? '#065F46' : '#2563EB',
+    background: highlight ? '#D1FAE5' : '#EFF6FF',
+    border:     highlight ? '1px solid #6EE7B7' : '1px solid #BFDBFE',
+    fontWeight: highlight ? 600 : 400,
+  }
+
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer"
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
-        fontSize: 12, color: '#2563EB', textDecoration: 'none',
-        background: '#EFF6FF', border: '1px solid #BFDBFE',
-        borderRadius: 6, padding: '3px 8px' }}>
-      📎 {label}
-    </a>
+    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+      {urls.map((u, i) => (
+        <a key={i} href={normalizarDriveUrl(u)} target="_blank"
+           rel="noopener noreferrer" style={estiloLink}>
+          {highlight ? '✅' : '📎'} {label}{urls.length > 1 ? ` ${i + 1}` : ''}
+        </a>
+      ))}
+    </span>
   )
 }
 
@@ -366,7 +393,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
               <LinkDoc url={venta.FOTO_DNI_ANV}    label="DNI Anverso"     />
               <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
-              <LinkDoc url={venta.BOLETA_URL}       label="Boleta VS"        />
+              <LinkDoc url={venta.BOLETA_URL}       label="Boleta VS"        highlight={!!venta.BOLETA_URL} />
               <LinkDoc url={venta.SUBSANACION_URL}  label="Doc subsanado"    />
             </div>
           )}
