@@ -237,10 +237,10 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     llamarAPI({ action: 'observar_contenido', obs: contObsTexto.trim() })
   }
 
-const reagendarAct = () => {
+  const reagendarAct = () => {
   if (!reagendarMotivo.trim()) return
   llamarAPI({ action: 'reagendar', motivo: reagendarMotivo.trim() })
-}
+  }
 
   const corregirContenido = () => {
     if (!editNombre.trim())
@@ -748,7 +748,7 @@ const reagendarAct = () => {
                       </p>
                     )}
                   </div>
-                )}            {(estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA') && !reagendarOpen && (
+                )}            {puedeAccion('reagendar') && (estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA') && !reagendarOpen && (
               <Btn onClick={() => setReagendarOpen(true)} color="#D97706" small>Reagendar cita</Btn>
             )}
 
