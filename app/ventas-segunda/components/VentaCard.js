@@ -165,6 +165,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const [horaCita,        setHoraCita]        = useState('')
   const [obsTexto,        setObsTexto]        = useState('')
   const [contObsTexto,    setContObsTexto]    = useState('')
+  const [reagendarOpen, setReagendarOpen] = useState(false)
+  const [reagendarMotivo, setReagendarMotivo] = useState('')
   const [msg,             setMsg]             = useState(null)
   const [subiendoBoleta,      setSubiendoBoleta]      = useState(false)
   const [subiendoSubsanacion, setSubiendoSubsanacion] = useState(false)
@@ -199,6 +201,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
       setAgendaOpen(false)
       setObsOpen(false)
       setContObsOpen(false)
+    setReagendarOpen(false)
+    setReagendarMotivo('')
       setTimeout(() => { setMsg(null); onActualizar?.() }, 1200)
     } catch (e) {
       setMsg({ tipo: 'err', texto: e.message })
@@ -232,6 +236,11 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     if (!contObsTexto.trim()) return
     llamarAPI({ action: 'observar_contenido', obs: contObsTexto.trim() })
   }
+
+const reagendarAct = () => {
+  if (!reagendarMotivo.trim()) return
+  llamarAPI({ action: 'reagendar', motivo: reagendarMotivo.trim() })
+}
 
   const corregirContenido = () => {
     if (!editNombre.trim())
@@ -678,7 +687,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     )}
                     {fechaCita && horaCita && rangoValido && anticipacionValida && !reglaDiaAnterior && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ Fuera de horario: para citas de mañana solo se permiten horarios desde las 11:00.
+                        ⚠ Fuera de horario: para citas del proximo dia habil solo se permiten horarios desde las 11:00.
                       </p>
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -739,7 +748,10 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                       </p>
                     )}
                   </div>
-                )}
+                )}            {(estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA') && !reagendarOpen && (
+              <Btn onClick={() => setReagendarOpen(true)} color="#D97706" small>Reagendar cita</Btn>
+            )}
+
                 {/* Solicitar GM:
                     · Flujo normal: solo en CITA_CONFIRMADA
                     · EN CALIFICACIÓN: en CITA_CONFIRMADA (coexiste con Firmado) y en FIRMADO */}
@@ -778,6 +790,18 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                     ✅ Confirmar subsanación
                   </Btn>
                 )}
+            {reagendarOpen && (
+              <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: 10, width: '100%', marginTop: 4 }}>
+                <p style={{ fontSize: 12, color: '#92400E', margin: '0 0 8px', fontWeight: 600 }}>Reagendamiento de cita</p>
+                <textarea value={reagendarMotivo} onChange={e => setReagendarMotivo(e.target.value)}
+                  placeholder="Describe el motivo del reagendamiento..." rows={3}
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #FCD34D', borderRadius: 6, padding: '7px 10px', fontSize: 12, resize: 'vertical' }} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <Btn onClick={reagendarAct} disabled={!reagendarMotivo.trim() || cargando} color="#D97706">Guardar</Btn>
+                  <Btn onClick={() => { setReagendarOpen(false); setReagendarMotivo('') }} color="#6B7280" small>Cancelar</Btn>
+                </div>
+              </div>
+            )}
               </div>
             )}
 
