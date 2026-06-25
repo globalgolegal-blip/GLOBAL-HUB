@@ -223,13 +223,20 @@ export default function VentasSegundaPage() {
                 </button>
               ))}
             </div>
-            <a href="/"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
-                color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
-                borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
-              {'← Desembolso'}
-            </a>
-          </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+  <a href="https://gobot-leg.github.io/GOBOT/gobot_faq_74.html" target="_blank" rel="noreferrer"
+    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
+      color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
+      borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
+    🏍️ ¿Qué moto vender?
+  </a>
+  <a href="/"
+    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
+      color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
+      borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
+    {'← Desembolso'}
+  </a>
+</div>
 
           {/* Panel de login inline (desplegable) */}
           {mostrarLogin && !usuario && (
