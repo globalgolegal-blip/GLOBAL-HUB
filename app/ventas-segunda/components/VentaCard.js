@@ -748,7 +748,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
                       </p>
                     )}
                   </div>
-                )}            {puedeAccion('reagendar') && (estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA') && !reagendarOpen && (
+                )}            {puedeAccion('reagendar') && (estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA' || estado === 'DOCS_OBSERVADOS') && !reagendarOpen && (
               <Btn onClick={() => setReagendarOpen(true)} color="#D97706" small>Reagendar cita</Btn>
             )}
 
