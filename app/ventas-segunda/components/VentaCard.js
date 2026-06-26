@@ -9,7 +9,7 @@ import {
   ESTADO_CONFIG_VS,
   ESTADO_DESCRIPCION,
   validarAnticipacionCita,
-  validarRangoHorario,
+  validarRangoHorario,h
   validarReglaDiaAnterior,
   puedeConfirmarCita,
 } from '../../../lib/ventas-segunda/utils'
@@ -138,6 +138,15 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const dniInvalido      = !soloDigitos(venta.DNI)
   const datosInvalidos   = telefonoInvalido || dniInvalido
 
+  // Extrae el motivo del último reagendamiento del historial
+  const motivoReagenda = (() => {
+    if (!venta.OBSERVACIONES) return ''
+    for (const linea of venta.OBSERVACIONES.split('\n')) {
+      const m = linea.match(/Motivo:\s*(.+)/i)
+      if (m) return m[1].trim().toUpperCase()
+    }
+    return ''
+  })()
   // Texto de situación al pie del card — dinámico por gmEstado y estado
   const descripcionEstado =
     enProceso
@@ -154,6 +163,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
       ? `Documentos observados${areaObs ? ' por ' + areaObs : ''} — Consultar directamente`
       : estado === 'CONTENIDO_OBSERVADO'
       ? 'Datos observados por Legal — Comercial debe corregir'
+      : estado === 'PENDIENTE_REAGENDA'
+      ? ('Notaría ordenó reagendar' + (motivoReagenda ? ' — ' + motivoReagenda : ''))
       : (ESTADO_DESCRIPCION[estado] || '')
 
   const [expandido,       setExpandido]       = useState(false)
