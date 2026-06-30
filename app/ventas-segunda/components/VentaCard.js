@@ -9,7 +9,7 @@ import {
   ESTADO_CONFIG_VS,
   ESTADO_DESCRIPCION,
   validarAnticipacionCita,
-  validarRangoHorario,h
+  validarRangoHorario,
   validarReglaDiaAnterior,
   puedeConfirmarCita,
 } from '../../../lib/ventas-segunda/utils'
