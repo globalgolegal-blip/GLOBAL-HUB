@@ -1,4 +1,16 @@
 'use client'
+// components/ContractCard.jsx — ETAPA 1
+// Cambios respecto al original:
+//   1. displayEstado = contrato._estadoVista || estado  (para vista pública)
+//   2. Badge usa displayEstado en vista global, estado en modo Legal
+//   3. venceHoy usa displayEstado (OBSERVADO_SISTEMA → PENDIENTE activa el banner)
+//   4. Bloque solicitud excluye OBSERVADO_SISTEMA en modo Legal
+//   5. "Validacion ya solicitada" usa displayEstado
+//   6. Nuevas flags: mostrarLegalPendienteJotform, mostrarLegalObsSistema
+//   7. Nuevo handler: handleCompletadoJotform (reutiliza onLegalValidar)
+//   8. Nuevo bloque JSX: PENDIENTE_JOTFORM (botón Completado)
+//   9. Nuevo bloque JSX: OBSERVADO_SISTEMA (banner + Validar + Observar, sin Pendiente)
+
 import { useState } from 'react'
 import { ESTADO_CONFIG, extraerIntentos } from '../lib/utils'
 
@@ -28,19 +40,14 @@ function isHoy(val) {
       && d.getDate()     === hoy.getDate()
 }
 
-// Retorna "hace Xh Ym" o "hace Xm" a partir de un timestamp.
-// Acepta: 'yyyy/MM/dd HH:mm' (texto en Sheet) o ISO string (cuando Sheets serializa la fecha como Date)
 function tiempoTranscurrido(val) {
   if (!val) return null
   const s = String(val).trim()
   let d
-  // Formato guardado como texto: yyyy/MM/dd HH:mm
   const m = s.match(/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/)
   if (m) {
-    // Construimos en hora local de Lima (el valor ya viene en PET)
     d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]))
   } else {
-    // Google Sheets puede serializar celdas de tipo Date como ISO string al hacer JSON.stringify
     d = new Date(s)
   }
   if (!d || isNaN(d.getTime())) return null
@@ -80,16 +87,22 @@ export default function ContractCard({
   const [enviando,               setEnviando]               = useState(false)
   const [enviandoReenvio,        setEnviandoReenvio]        = useState(false)
   const [enviandoReenvioVencido, setEnviandoReenvioVencido] = useState(false)
-  // Estados para acciones del Modo Legal
   const [enviandoLVal,    setEnviandoLVal]    = useState(false)
   const [enviandoLObs,    setEnviandoLObs]    = useState(false)
   const [enviandoLPend,   setEnviandoLPend]   = useState(false)
   const [enviandoLCR,     setEnviandoLCR]     = useState(false)
   const [enviandoLRV,     setEnviandoLRV]     = useState(false)
+  const [enviandoCompletado, setEnviandoCompletado] = useState(false)  // [NUEVO]
   const [nuevaFechaLegal, setNuevaFechaLegal] = useState('')
 
-  const estado      = contrato._estado || 'INGRESADO'
-  const cfg         = ESTADO_CONFIG[estado] || ESTADO_CONFIG['INGRESADO']
+  const estado       = contrato._estado || 'INGRESADO'
+  // [NUEVO] displayEstado: estado público para usuarios sin PIN Legal
+  const displayEstado = contrato._estadoVista || estado
+
+  // Badge: Legal ve el estado real; vista global ve el estado público
+  const enModoLegal = legalAutenticado === true
+  const cfg = ESTADO_CONFIG[enModoLegal ? estado : displayEstado] || ESTADO_CONFIG['INGRESADO']
+
   const esObservado = estado === 'CONTRATO_OBSERVADO'
   const intentos    = extraerIntentos(contrato)
 
@@ -97,34 +110,32 @@ export default function ContractCard({
   const reenvioSolicitado        = solicitudVal.startsWith('REENVIAR') && !solicitudVal.startsWith('REENVIAR_VENCIDO')
   const reenvioVencidoSolicitado = solicitudVal.startsWith('REENVIAR_VENCIDO')
 
-  const venceHoy = (estado === 'PENDIENTE' || estado === 'SOLICITADO')
+  // [MODIFICADO] venceHoy usa displayEstado: OBSERVADO_SISTEMA → PENDIENTE activa el banner
+  const venceHoy = (displayEstado === 'PENDIENTE' || displayEstado === 'SOLICITADO')
                 && isHoy(contrato['FECHA DE VENCIMIENTO'])
   const clienteSinFirmar = estado === 'PENDIENTE'
                         && String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase() === 'PENDIENTE'
 
-  // Vencido hace exactamente 1 día y col P es VENCIDO, NO o vacío → aún permite validar
   const firmadoRaw = String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase()
   const puedeValidarVencido = estado === 'VENCIDO'
       && isVencidoAyer(contrato['FECHA DE VENCIMIENTO'])
       && firmadoRaw !== 'SI'
       && firmadoRaw !== 'OBSERVADO'
-  // Si se solicitó validación en un contrato vencido-1día, col T tendrá SOLICITADO|N
   const vencidoYaSolicitado = puedeValidarVencido && solicitudVal.startsWith('SOLICITADO')
 
+  // Handlers normales
   async function handleSolicitar() {
     if (enviando) return
     setEnviando(true)
     try { await onSolicitarValidacion(contrato['ID']) }
     finally { setEnviando(false) }
   }
-
   async function handleReenvio() {
     if (enviandoReenvio) return
     setEnviandoReenvio(true)
     try { await onSolicitarReenvio(contrato['ID']) }
     finally { setEnviandoReenvio(false) }
   }
-
   async function handleReenvioVencido() {
     if (enviandoReenvioVencido) return
     setEnviandoReenvioVencido(true)
@@ -163,17 +174,26 @@ export default function ContractCard({
     try { await onLegalReenviarVencido(contrato['ID'], nuevaFechaLegal) }
     finally { setEnviandoLRV(false) }
   }
+  // [NUEVO] Completado JotForm — reutiliza la acción validar (escribe SI en col P)
+  async function handleCompletadoJotform() {
+    if (enviandoCompletado) return
+    setEnviandoCompletado(true)
+    try { await onLegalValidar(contrato['ID']) }
+    finally { setEnviandoCompletado(false) }
+  }
 
   const mostrarBloqueReenvio = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
-  // Modo Legal: controlado exclusivamente por el prop legalAutenticado
-  const enModoLegal = legalAutenticado === true
-  // Visibilidad bloques legales
+
+  // Visibilidad bloques legales (estados existentes)
   const mostrarLegalValidar  = enModoLegal && (estado === 'SOLICITADO' || puedeValidarVencido)
   const mostrarLegalReenvio  = enModoLegal && estado === 'OBSERVADO' && reenvioSolicitado
   const mostrarLegalVencido  = enModoLegal && estado === 'VENCIDO' && reenvioVencidoSolicitado
-  // FECHA SOLICITUD — solo visible para Legal
-  const fechaSolVal    = contrato['FECHA SOLICITUD'] || ''
-  const tiempoEspera   = enModoLegal ? tiempoTranscurrido(fechaSolVal) : null
+  // [NUEVO] Visibilidad bloques legales para nuevos estados
+  const mostrarLegalPendienteJotform = enModoLegal && estado === 'PENDIENTE_JOTFORM'
+  const mostrarLegalObsSistema       = enModoLegal && estado === 'OBSERVADO_SISTEMA'
+
+  const fechaSolVal  = contrato['FECHA SOLICITUD'] || ''
+  const tiempoEspera = enModoLegal ? tiempoTranscurrido(fechaSolVal) : null
 
   return (
     <div style={{
@@ -209,7 +229,7 @@ export default function ContractCard({
         </span>
       </div>
 
-      {/* Banner: vence hoy */}
+      {/* Banner: vence hoy — [MODIFICADO] usa displayEstado */}
       {venceHoy && (
         <div style={{
           margin: '0 0 8px', padding: '5px 10px', borderRadius: '6px',
@@ -252,24 +272,23 @@ export default function ContractCard({
         </div>
       </div>
 
-      {/* Timestamp de solicitud — solo visible en Modo Legal */}
+      {/* Timestamp de solicitud — solo Modo Legal */}
       {tiempoEspera && (
         <div style={{
           margin: '8px 0 0', padding: '5px 10px', borderRadius: '6px',
           background: '#0F2D1E', border: '0.5px solid #2A7A50',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontSize: '10px', color: '#6BCB99', fontWeight: '500' }}>
-            {'Solicitud recibida'}
-          </span>
-          <span style={{ fontSize: '10px', color: '#4DC987', fontWeight: '600' }}>
-            {tiempoEspera}
-          </span>
+          <span style={{ fontSize: '10px', color: '#6BCB99', fontWeight: '500' }}>{'Solicitud recibida'}</span>
+          <span style={{ fontSize: '10px', color: '#4DC987', fontWeight: '600' }}>{tiempoEspera}</span>
         </div>
       )}
 
-      {/* Bloque solicitud — PENDIENTE, SOLICITADO, y VENCIDO de solo 1 día */}
-      {(estado === 'PENDIENTE' || estado === 'SOLICITADO' || puedeValidarVencido) && (
+      {/* ── Bloque solicitud — PENDIENTE, SOLICITADO, vencido ayer ──
+          [MODIFICADO] usa displayEstado; excluye OBSERVADO_SISTEMA en Modo Legal
+          (Legal ve el bloque especializado más abajo) */}
+      {(displayEstado === 'PENDIENTE' || displayEstado === 'SOLICITADO' || puedeValidarVencido)
+       && !(enModoLegal && estado === 'OBSERVADO_SISTEMA') && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
           {puedeValidarVencido && (
@@ -282,7 +301,8 @@ export default function ContractCard({
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            {(estado === 'SOLICITADO' || vencidoYaSolicitado) ? (
+            {/* [MODIFICADO] usa displayEstado para "ya solicitada" vs botón */}
+            {(displayEstado === 'SOLICITADO' || vencidoYaSolicitado) ? (
               <div style={{
                 fontSize: '11px', fontWeight: '500', padding: '6px 14px',
                 borderRadius: '8px', background: '#FFF0E6',
@@ -354,7 +374,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* Bloque reenvio vencido — solo VENCIDO, solo AAC */}
+      {/* Bloque reenvio vencido — solo VENCIDO + AC */}
       {estado === 'VENCIDO' && acAutenticado && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
@@ -385,7 +405,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* ── MODO LEGAL: Validar / Observar / Pendiente ── */}
+      {/* ── MODO LEGAL: Validar / Observar / Pendiente (SOLICITADO, vencido ayer) ── */}
       {mostrarLegalValidar && (
         <>
           <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
@@ -491,6 +511,84 @@ export default function ContractCard({
               }}
             >
               {enviandoLRV ? '...' : 'Reenviar'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── [NUEVO] MODO LEGAL: PENDIENTE_JOTFORM — JotForm por subir ── */}
+      {mostrarLegalPendienteJotform && (
+        <>
+          <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
+          <p style={{ fontSize: '10px', fontWeight: '600', color: '#4DC987', letterSpacing: '0.06em', marginBottom: '8px' }}>
+            {'ACCION LEGAL · JotForm pendiente'}
+          </p>
+          <div style={{
+            marginBottom: '8px', padding: '6px 10px', borderRadius: '6px',
+            background: '#F3EEFE', border: '0.5px solid #6B3FA0',
+            fontSize: '11px', color: '#6B3FA0', fontWeight: '500',
+          }}>
+            {'Contrato validado por sistema — pendiente subir a JotForm'}
+          </div>
+          <button
+            onClick={handleCompletadoJotform}
+            disabled={enviandoCompletado}
+            style={{
+              width: '100%', fontSize: '11px', fontWeight: '600',
+              padding: '8px 14px', borderRadius: '8px',
+              background: enviandoCompletado ? '#B4B2A9' : '#1A6B47',
+              color: 'white', border: 'none',
+              cursor: enviandoCompletado ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {enviandoCompletado ? 'Procesando...' : 'Completado — JotForm subido'}
+          </button>
+        </>
+      )}
+
+      {/* ── [NUEVO] MODO LEGAL: OBSERVADO_SISTEMA — revisión manual ── */}
+      {mostrarLegalObsSistema && (
+        <>
+          <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
+          <p style={{ fontSize: '10px', fontWeight: '600', color: '#4DC987', letterSpacing: '0.06em', marginBottom: '8px' }}>
+            {'ACCION LEGAL · Observado por sistema'}
+          </p>
+          {/* Banner con el motivo del sistema */}
+          <div style={{
+            marginBottom: '8px', padding: '6px 10px', borderRadius: '6px',
+            background: '#FEF3C7', border: '0.5px solid #D97706',
+            fontSize: '11px', color: '#92400E', fontWeight: '500',
+            lineHeight: '1.4',
+          }}>
+            {contrato['RESULTADO'] || 'Sin detalle de observación'}
+          </div>
+          {/* Validar + Observar — SIN botón Pendiente (el sistema revisó el último envío) */}
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              onClick={handleLegalValidar}
+              disabled={enviandoLVal}
+              style={{
+                flex: 1, fontSize: '11px', fontWeight: '600',
+                padding: '7px 10px', borderRadius: '8px',
+                background: enviandoLVal ? '#B4B2A9' : '#1A6B47',
+                color: 'white', border: 'none',
+                cursor: enviandoLVal ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {enviandoLVal ? '...' : 'Validar'}
+            </button>
+            <button
+              onClick={handleLegalObservar}
+              disabled={enviandoLObs}
+              style={{
+                flex: 1, fontSize: '11px', fontWeight: '600',
+                padding: '7px 10px', borderRadius: '8px',
+                background: enviandoLObs ? '#B4B2A9' : '#BA7517',
+                color: 'white', border: 'none',
+                cursor: enviandoLObs ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {enviandoLObs ? '...' : 'Observar'}
             </button>
           </div>
         </>
