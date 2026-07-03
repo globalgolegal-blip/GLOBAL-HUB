@@ -181,14 +181,15 @@ await cargarDatos()
 } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
 }, [cargarDatos])
 
-const legalObservar = useCallback(async (id) => {
-setErrorSolicitud(null)
-try {
-const res = await fetch(`${SHEET_URL}?accion=observar&id=${encodeURIComponent(id)}`)
-const data = await res.json()
-if (!data.ok) { setErrorSolicitud('No se pudo observar. Intenta nuevamente.'); return }
-await cargarDatos()
-} catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+const legalObservar = useCallback(async (id, motivo) => {
+  setErrorSolicitud(null)
+  try {
+    const url = `${SHEET_URL}?accion=observar&id=${encodeURIComponent(id)}&motivo=${encodeURIComponent(motivo || '')}`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (!data.ok) { setErrorSolicitud('No se pudo observar. Intenta nuevamente.'); return }
+    await cargarDatos()
+  } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
 }, [cargarDatos])
 
 const legalMarcarPendiente = useCallback(async (id) => {
