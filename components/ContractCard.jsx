@@ -1,15 +1,7 @@
 'use client'
-// components/ContractCard.jsx — ETAPA 1
-// Cambios respecto al original:
-//   1. displayEstado = contrato._estadoVista || estado  (para vista pública)
-//   2. Badge usa displayEstado en vista global, estado en modo Legal
-//   3. venceHoy usa displayEstado (OBSERVADO_SISTEMA → PENDIENTE activa el banner)
-//   4. Bloque solicitud excluye OBSERVADO_SISTEMA en modo Legal
-//   5. "Validacion ya solicitada" usa displayEstado
-//   6. Nuevas flags: mostrarLegalPendienteJotform, mostrarLegalObsSistema
-//   7. Nuevo handler: handleCompletadoJotform (reutiliza onLegalValidar)
-//   8. Nuevo bloque JSX: PENDIENTE_JOTFORM (botón Completado)
-//   9. Nuevo bloque JSX: OBSERVADO_SISTEMA (banner + Validar + Observar, sin Pendiente)
+// components/ContractCard.jsx
+// ETAPA 1 (nuevos estados) + Modal unificado de observación Legal (v2)
+// Reemplaza al archivo anterior. Aplicar directamente en el repo.
 
 import { useState } from 'react'
 import { ESTADO_CONFIG, extraerIntentos } from '../lib/utils'
@@ -36,8 +28,8 @@ function isHoy(val) {
   if (isNaN(d)) return false
   const hoy = new Date()
   return d.getFullYear() === hoy.getFullYear()
-      && d.getMonth()    === hoy.getMonth()
-      && d.getDate()     === hoy.getDate()
+    && d.getMonth() === hoy.getMonth()
+    && d.getDate() === hoy.getDate()
 }
 
 function tiempoTranscurrido(val) {
@@ -74,56 +66,63 @@ function isVencidoAyer(val) {
   ayer.setHours(0, 0, 0, 0)
   ayer.setDate(ayer.getDate() - 1)
   return d.getFullYear() === ayer.getFullYear()
-      && d.getMonth()    === ayer.getMonth()
-      && d.getDate()     === ayer.getDate()
+    && d.getMonth() === ayer.getMonth()
+    && d.getDate() === ayer.getDate()
 }
 
 export default function ContractCard({
-  contrato, numero, onSolicitarValidacion, acAutenticado,
-  onSolicitarReenvio, onSolicitarReenvioVencido,
-  legalAutenticado, onLegalValidar, onLegalObservar,
-  onLegalMarcarPendiente, onLegalConfirmarReenvio, onLegalReenviarVencido,
+  contrato,
+  numero,
+  onSolicitarValidacion,
+  acAutenticado,
+  onSolicitarReenvio,
+  onSolicitarReenvioVencido,
+  legalAutenticado,
+  onLegalValidar,
+  onLegalObservar,
+  onLegalMarcarPendiente,
+  onLegalConfirmarReenvio,
+  onLegalReenviarVencido,
 }) {
-  const [enviando,               setEnviando]               = useState(false)
-  const [enviandoReenvio,        setEnviandoReenvio]        = useState(false)
+  const [enviando, setEnviando]                         = useState(false)
+  const [enviandoReenvio, setEnviandoReenvio]           = useState(false)
   const [enviandoReenvioVencido, setEnviandoReenvioVencido] = useState(false)
-  const [enviandoLVal,    setEnviandoLVal]    = useState(false)
-  const [enviandoLObs,    setEnviandoLObs]    = useState(false)
-  const [enviandoLPend,   setEnviandoLPend]   = useState(false)
-  const [enviandoLCR,     setEnviandoLCR]     = useState(false)
-  const [enviandoLRV,     setEnviandoLRV]     = useState(false)
-  const [enviandoCompletado, setEnviandoCompletado] = useState(false)  // [NUEVO]
-  const [nuevaFechaLegal, setNuevaFechaLegal] = useState('')
+  const [enviandoLVal, setEnviandoLVal]                 = useState(false)
+  const [enviandoLObs, setEnviandoLObs]                 = useState(false)
+  const [enviandoLPend, setEnviandoLPend]               = useState(false)
+  const [enviandoLCR, setEnviandoLCR]                   = useState(false)
+  const [enviandoLRV, setEnviandoLRV]                   = useState(false)
+  const [enviandoCompletado, setEnviandoCompletado]     = useState(false)
+  const [nuevaFechaLegal, setNuevaFechaLegal]           = useState('')
+  // ── Modal unificado de observación Legal ──────────────────────────────────
+  const [obsLegalOpen, setObsLegalOpen]                 = useState(false)
+  const [motivoObsLegal, setMotivoObsLegal]             = useState('')
 
   const estado       = contrato._estado || 'INGRESADO'
-  // [NUEVO] displayEstado: estado público para usuarios sin PIN Legal
   const displayEstado = contrato._estadoVista || estado
-
-  // Badge: Legal ve el estado real; vista global ve el estado público
-  const enModoLegal = legalAutenticado === true
+  const enModoLegal  = legalAutenticado === true
   const cfg = ESTADO_CONFIG[enModoLegal ? estado : displayEstado] || ESTADO_CONFIG['INGRESADO']
 
-  const esObservado = estado === 'CONTRATO_OBSERVADO'
-  const intentos    = extraerIntentos(contrato)
+  const esObservado    = estado === 'CONTRATO_OBSERVADO'
+  const intentos       = extraerIntentos(contrato)
 
-  const solicitudVal             = String(contrato['SOLICITUD'] || '').toUpperCase()
-  const reenvioSolicitado        = solicitudVal.startsWith('REENVIAR') && !solicitudVal.startsWith('REENVIAR_VENCIDO')
+  const solicitudVal           = String(contrato['SOLICITUD'] || '').toUpperCase()
+  const reenvioSolicitado      = solicitudVal.startsWith('REENVIAR') && !solicitudVal.startsWith('REENVIAR_VENCIDO')
   const reenvioVencidoSolicitado = solicitudVal.startsWith('REENVIAR_VENCIDO')
 
-  // [MODIFICADO] venceHoy usa displayEstado: OBSERVADO_SISTEMA → PENDIENTE activa el banner
   const venceHoy = (displayEstado === 'PENDIENTE' || displayEstado === 'SOLICITADO')
-                && isHoy(contrato['FECHA DE VENCIMIENTO'])
+    && isHoy(contrato['FECHA DE VENCIMIENTO'])
   const clienteSinFirmar = estado === 'PENDIENTE'
-                        && String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase() === 'PENDIENTE'
+    && String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase() === 'PENDIENTE'
 
   const firmadoRaw = String(contrato['CONTRATO FIRMADO CONFORME'] || '').trim().toUpperCase()
   const puedeValidarVencido = estado === 'VENCIDO'
-      && isVencidoAyer(contrato['FECHA DE VENCIMIENTO'])
-      && firmadoRaw !== 'SI'
-      && firmadoRaw !== 'OBSERVADO'
+    && isVencidoAyer(contrato['FECHA DE VENCIMIENTO'])
+    && firmadoRaw !== 'SI'
+    && firmadoRaw !== 'OBSERVADO'
   const vencidoYaSolicitado = puedeValidarVencido && solicitudVal.startsWith('SOLICITADO')
 
-  // Handlers normales
+  // ── Handlers básicos ──────────────────────────────────────────────────────
   async function handleSolicitar() {
     if (enviando) return
     setEnviando(true)
@@ -142,19 +141,23 @@ export default function ContractCard({
     try { await onSolicitarReenvioVencido(contrato['ID']) }
     finally { setEnviandoReenvioVencido(false) }
   }
-
-  // Handlers Modo Legal
   async function handleLegalValidar() {
     if (enviandoLVal) return
     setEnviandoLVal(true)
     try { await onLegalValidar(contrato['ID']) }
     finally { setEnviandoLVal(false) }
   }
+  // ── [MODIFICADO] Ahora recibe motivoObsLegal del estado; cierra modal al terminar ──
   async function handleLegalObservar() {
     if (enviandoLObs) return
     setEnviandoLObs(true)
-    try { await onLegalObservar(contrato['ID']) }
-    finally { setEnviandoLObs(false) }
+    try {
+      await onLegalObservar(contrato['ID'], motivoObsLegal)
+    } finally {
+      setEnviandoLObs(false)
+      setObsLegalOpen(false)
+      setMotivoObsLegal('')
+    }
   }
   async function handleLegalPendiente() {
     if (enviandoLPend) return
@@ -174,7 +177,6 @@ export default function ContractCard({
     try { await onLegalReenviarVencido(contrato['ID'], nuevaFechaLegal) }
     finally { setEnviandoLRV(false) }
   }
-  // [NUEVO] Completado JotForm — reutiliza la acción validar (escribe SI en col P)
   async function handleCompletadoJotform() {
     if (enviandoCompletado) return
     setEnviandoCompletado(true)
@@ -182,15 +184,13 @@ export default function ContractCard({
     finally { setEnviandoCompletado(false) }
   }
 
-  const mostrarBloqueReenvio = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
-
-  // Visibilidad bloques legales (estados existentes)
-  const mostrarLegalValidar  = enModoLegal && (estado === 'SOLICITADO' || puedeValidarVencido)
-  const mostrarLegalReenvio  = enModoLegal && estado === 'OBSERVADO' && reenvioSolicitado
-  const mostrarLegalVencido  = enModoLegal && estado === 'VENCIDO' && reenvioVencidoSolicitado
-  // [NUEVO] Visibilidad bloques legales para nuevos estados
+  // ── Condiciones de visibilidad de bloques ─────────────────────────────────
+  const mostrarBloqueReenvio        = estado === 'OBSERVADO' && (reenvioSolicitado || acAutenticado)
+  const mostrarLegalValidar         = enModoLegal && (estado === 'SOLICITADO' || puedeValidarVencido)
+  const mostrarLegalReenvio         = enModoLegal && estado === 'OBSERVADO' && reenvioSolicitado
+  const mostrarLegalVencido         = enModoLegal && estado === 'VENCIDO' && reenvioVencidoSolicitado
   const mostrarLegalPendienteJotform = enModoLegal && estado === 'PENDIENTE_JOTFORM'
-  const mostrarLegalObsSistema       = enModoLegal && estado === 'OBSERVADO_SISTEMA'
+  const mostrarLegalObsSistema      = enModoLegal && estado === 'OBSERVADO_SISTEMA'
 
   const fechaSolVal  = contrato['FECHA SOLICITUD'] || ''
   const tiempoEspera = enModoLegal ? tiempoTranscurrido(fechaSolVal) : null
@@ -204,7 +204,8 @@ export default function ContractCard({
       borderLeftColor: cfg.borderCard,
       padding: '12px 14px',
     }}>
-      {/* Cabecera */}
+
+      {/* ── Cabecera ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0 }}>
           {numero != null && (
@@ -229,7 +230,7 @@ export default function ContractCard({
         </span>
       </div>
 
-      {/* Banner: vence hoy — [MODIFICADO] usa displayEstado */}
+      {/* ── Banner vence hoy ─────────────────────────────────────────────── */}
       {venceHoy && (
         <div style={{
           margin: '0 0 8px', padding: '5px 10px', borderRadius: '6px',
@@ -241,7 +242,7 @@ export default function ContractCard({
         </div>
       )}
 
-      {/* Datos */}
+      {/* ── Datos ────────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
         <div style={{ fontSize: '11px' }}>
           <span style={{ color: '#5F5E5A', fontWeight: '500' }}>{'DOI: '}</span>
@@ -272,7 +273,7 @@ export default function ContractCard({
         </div>
       </div>
 
-      {/* Timestamp de solicitud — solo Modo Legal */}
+      {/* ── Timestamp solicitud (solo Modo Legal) ────────────────────────── */}
       {tiempoEspera && (
         <div style={{
           margin: '8px 0 0', padding: '5px 10px', borderRadius: '6px',
@@ -284,11 +285,9 @@ export default function ContractCard({
         </div>
       )}
 
-      {/* ── Bloque solicitud — PENDIENTE, SOLICITADO, vencido ayer ──
-          [MODIFICADO] usa displayEstado; excluye OBSERVADO_SISTEMA en Modo Legal
-          (Legal ve el bloque especializado más abajo) */}
+      {/* ── Bloque solicitud ─────────────────────────────────────────────── */}
       {(displayEstado === 'PENDIENTE' || displayEstado === 'SOLICITADO' || puedeValidarVencido)
-       && !(enModoLegal && estado === 'OBSERVADO_SISTEMA') && (
+        && !(enModoLegal && estado === 'OBSERVADO_SISTEMA') && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
           {puedeValidarVencido && (
@@ -301,7 +300,6 @@ export default function ContractCard({
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            {/* [MODIFICADO] usa displayEstado para "ya solicitada" vs botón */}
             {(displayEstado === 'SOLICITADO' || vencidoYaSolicitado) ? (
               <div style={{
                 fontSize: '11px', fontWeight: '500', padding: '6px 14px',
@@ -337,13 +335,13 @@ export default function ContractCard({
           </div>
           {clienteSinFirmar && (
             <p style={{ margin: '8px 0 0', fontSize: '10px', color: '#888780', fontStyle: 'italic' }}>
-              {'No se validó · El cliente no ha firmado'}
+              {'No se valido · El cliente no ha firmado'}
             </p>
           )}
         </>
       )}
 
-      {/* Bloque reenvio — solo OBSERVADO (firma) */}
+      {/* ── Bloque reenvio (OBSERVADO) ───────────────────────────────────── */}
       {mostrarBloqueReenvio && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
@@ -364,8 +362,7 @@ export default function ContractCard({
                 borderRadius: '8px',
                 background: enviandoReenvio ? '#B4B2A9' : '#1A2238',
                 color: 'white', border: 'none',
-                cursor: enviandoReenvio ? 'not-allowed' : 'pointer',
-                transition: 'background 0.15s',
+                cursor: enviandoReenvio ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
               }}
             >
               {enviandoReenvio ? 'Enviando...' : 'Reenviar contrato'}
@@ -374,7 +371,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* Bloque reenvio vencido — solo VENCIDO + AC */}
+      {/* ── Bloque reenvio vencido (AC autenticado) ──────────────────────── */}
       {estado === 'VENCIDO' && acAutenticado && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
@@ -395,8 +392,7 @@ export default function ContractCard({
                 borderRadius: '8px',
                 background: enviandoReenvioVencido ? '#B4B2A9' : '#5DADE2',
                 color: 'white', border: 'none',
-                cursor: enviandoReenvioVencido ? 'not-allowed' : 'pointer',
-                transition: 'background 0.15s',
+                cursor: enviandoReenvioVencido ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
               }}
             >
               {enviandoReenvioVencido ? 'Enviando...' : 'Solicitar reenvio'}
@@ -405,7 +401,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* ── MODO LEGAL: Validar / Observar / Pendiente (SOLICITADO, vencido ayer) ── */}
+      {/* ── MODO LEGAL: Validar / Observar / Pendiente (SOLICITADO o vencido ayer) */}
       {mostrarLegalValidar && (
         <>
           <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
@@ -426,8 +422,9 @@ export default function ContractCard({
             >
               {enviandoLVal ? '...' : 'Validar'}
             </button>
+            {/* Abre modal vacío — Legal escribe motivo manualmente */}
             <button
-              onClick={handleLegalObservar}
+              onClick={() => { setMotivoObsLegal(''); setObsLegalOpen(true) }}
               disabled={enviandoLObs}
               style={{
                 flex: 1, minWidth: '70px', fontSize: '11px', fontWeight: '600',
@@ -456,7 +453,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* ── MODO LEGAL: Confirmar reenvio (OBSERVADO + REENVIAR) ── */}
+      {/* ── MODO LEGAL: Confirmar reenvio (OBSERVADO) ───────────────────── */}
       {mostrarLegalReenvio && (
         <>
           <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
@@ -479,7 +476,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* ── MODO LEGAL: Reenviar vencido + nueva fecha (VENCIDO + REENVIAR_VENCIDO) ── */}
+      {/* ── MODO LEGAL: Reenviar vencido + nueva fecha ──────────────────── */}
       {mostrarLegalVencido && (
         <>
           <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
@@ -516,7 +513,7 @@ export default function ContractCard({
         </>
       )}
 
-      {/* ── [NUEVO] MODO LEGAL: PENDIENTE_JOTFORM — JotForm por subir ── */}
+      {/* ── [NUEVO] MODO LEGAL: PENDIENTE_JOTFORM ───────────────────────── */}
       {mostrarLegalPendienteJotform && (
         <>
           <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
@@ -546,23 +543,20 @@ export default function ContractCard({
         </>
       )}
 
-      {/* ── [NUEVO] MODO LEGAL: OBSERVADO_SISTEMA — revisión manual ── */}
+      {/* ── [NUEVO] MODO LEGAL: OBSERVADO_SISTEMA ───────────────────────── */}
       {mostrarLegalObsSistema && (
         <>
           <div style={{ borderTop: '1px solid #2A7A50', margin: '10px 0' }} />
           <p style={{ fontSize: '10px', fontWeight: '600', color: '#4DC987', letterSpacing: '0.06em', marginBottom: '8px' }}>
             {'ACCION LEGAL · Observado por sistema'}
           </p>
-          {/* Banner con el motivo del sistema */}
           <div style={{
             marginBottom: '8px', padding: '6px 10px', borderRadius: '6px',
             background: '#FEF3C7', border: '0.5px solid #D97706',
-            fontSize: '11px', color: '#92400E', fontWeight: '500',
-            lineHeight: '1.4',
+            fontSize: '11px', color: '#92400E', fontWeight: '500', lineHeight: '1.4',
           }}>
-            {contrato['RESULTADO'] || 'Sin detalle de observación'}
+            {contrato['RESULTADO'] || 'Sin detalle de observacion'}
           </div>
-          {/* Validar + Observar — SIN botón Pendiente (el sistema revisó el último envío) */}
           <div style={{ display: 'flex', gap: '6px' }}>
             <button
               onClick={handleLegalValidar}
@@ -577,8 +571,9 @@ export default function ContractCard({
             >
               {enviandoLVal ? '...' : 'Validar'}
             </button>
+            {/* Abre modal pre-cargado con col V (RESULTADO) */}
             <button
-              onClick={handleLegalObservar}
+              onClick={() => { setMotivoObsLegal(contrato['RESULTADO'] || ''); setObsLegalOpen(true) }}
               disabled={enviandoLObs}
               style={{
                 flex: 1, fontSize: '11px', fontWeight: '600',
@@ -593,6 +588,68 @@ export default function ContractCard({
           </div>
         </>
       )}
+
+      {/* ── [NUEVO] Modal unificado de observación Legal ─────────────────────
+          Se muestra cuando Legal presiona "Observar" en cualquier bloque.
+          • Desde SOLICITADO   → textarea vacío
+          • Desde OBSERVADO_SISTEMA → textarea pre-cargado con col V (RESULTADO)
+          Confirmar escribe el texto en col S y cambia firma a OBSERVADO.
+      ────────────────────────────────────────────────────────────────────── */}
+      {obsLegalOpen && (
+        <>
+          <div style={{ borderTop: '1px solid #D97706', margin: '10px 0' }} />
+          <p style={{ fontSize: '10px', fontWeight: '600', color: '#92400E', letterSpacing: '0.06em', marginBottom: '6px' }}>
+            MOTIVO DE OBSERVACIÓN
+          </p>
+          {mostrarLegalObsSistema && (
+            <p style={{
+              fontSize: '11px', color: '#92400E', margin: '0 0 8px',
+              background: '#FEF3C7', padding: '5px 8px', borderRadius: '4px',
+              border: '0.5px solid #FCD34D', lineHeight: '1.4',
+            }}>
+              {'Pre-cargado desde col V — edita si es necesario.'}
+            </p>
+          )}
+          <textarea
+            value={motivoObsLegal}
+            onChange={e => setMotivoObsLegal(e.target.value)}
+            placeholder="Describe el motivo de la observacion..."
+            rows={3}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              border: '1px solid #FCD34D', borderRadius: '6px',
+              padding: '7px 10px', fontSize: '12px',
+              resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+          <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+            <button
+              onClick={handleLegalObservar}
+              disabled={!motivoObsLegal.trim() || enviandoLObs}
+              style={{
+                fontSize: '11px', fontWeight: '600', padding: '7px 14px',
+                borderRadius: '8px',
+                background: !motivoObsLegal.trim() || enviandoLObs ? '#B4B2A9' : '#BA7517',
+                color: 'white', border: 'none',
+                cursor: !motivoObsLegal.trim() || enviandoLObs ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {enviandoLObs ? 'Guardando...' : 'Confirmar observacion'}
+            </button>
+            <button
+              onClick={() => { setObsLegalOpen(false); setMotivoObsLegal('') }}
+              style={{
+                fontSize: '11px', fontWeight: '600', padding: '7px 10px',
+                borderRadius: '8px', background: '#6B7280',
+                color: 'white', border: 'none', cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </>
+      )}
+
     </div>
   )
 }
