@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import MetaCard from '../components/MetaCard'
 import ContractList from '../components/ContractList'
 import { parsearSheet } from '../lib/parseSheets'
-import { derivarEstado, hoyISO, ESTADO_CONFIG } from '../lib/utils'
+import { derivarEstado, estadoParaVista, hoyISO, ESTADO_CONFIG } from '../lib/utils'
 import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../lib/regions'
 const AC_PIN = '159753'
 const LEGAL_PIN = '4815926'
@@ -104,12 +104,16 @@ if (!res.ok) throw new Error(`HTTP ${res.status}`)
 const filas = await res.json()
 if (filas.error) throw new Error(filas.error)
 const { meta: metaParsed, contratos: contratosParsed } = parsearSheet(filas)
-const contratosConEstado = contratosParsed.map(c => ({
-...c,
-_estado: derivarEstado(c),
-_region: c['REGION'] || getRegionDeCiudad(c['CIUDAD']),
-_depto: c['DEPARTAMENTO'] || getDeptoDeciudad(c['CIUDAD']),
-}))
+const contratosConEstado = contratosParsed.map(c => {
+  const est = derivarEstado(c)
+  return {
+    ...c,
+    _estado:      est,
+    _estadoVista: estadoParaVista(est, c),   // estado público (sin PIN Legal)
+    _region:      c['REGION'] || getRegionDeCiudad(c['CIUDAD']),
+    _depto:       c['DEPARTAMENTO'] || getDeptoDeciudad(c['CIUDAD']),
+  }
+})
 setMeta(metaParsed)
 setContratos(contratosConEstado)
 setUltimaAct(new Date())
@@ -273,9 +277,9 @@ acc[cat.key] = contratos.filter(c =>
 esEmitido(c) && matchFecha(c, 'FECHA DE ENVÍO') && matchLugar(c)
 ).length
 } else if (cat.key === 'PENDIENTE') {
-acc[cat.key] = contratos.filter(c =>
-(c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO') && matchLugar(c)
-).length
+    acc[cat.key] = contratos.filter(c =>
+      (c._estado === 'PENDIENTE' || c._estado === 'SOLICITADO' || c._estado === 'OBSERVADO_SISTEMA') && matchLugar(c)
+    ).length
 } else if (cat.key === 'VENCIDO') {
 if (lapsoActivo === 'hoy') {
 acc[cat.key] = contratos.filter(c => {
@@ -291,17 +295,18 @@ matchLugar(c)
 ).length
 }
 } else {
-acc[cat.key] = contratos.filter(c =>
-c._estado === cat.key &&
-matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') &&
-matchLugar(c)
-).length
+    acc[cat.key] = contratos.filter(c =>
+      (c._estadoVista || c._estado) === cat.key &&
+      matchFecha(c, COL_FECHA[cat.key] || 'FECHA DE ENVÍO') &&
+      matchLugar(c)
+    ).length
+  }
 }
 return acc
 }, {})
 const contratosFiltrados = contratos.filter(c => {
 if (categoriaActiva === 'PENDIENTE') {
-if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO') return false
+      if (c._estado !== 'PENDIENTE' && c._estado !== 'SOLICITADO' && c._estado !== 'OBSERVADO_SISTEMA') return false
 if (ciudadActiva && (c['CIUDAD'] || '').toUpperCase() !== ciudadActiva.toUpperCase()) return false
 if (regionActiva && c._region !== regionActiva) return false
 if (busqueda.trim()) {
@@ -324,8 +329,8 @@ if (c._estado !== 'VENCIDO') return false
 if ((fechaDesde || fechaHasta) && !matchFecha(c, 'FECHA DE VENCIMIENTO')) return false
 }
 } else {
-if (c._estado !== categoriaActiva) return false
-}
+      if ((c._estadoVista || c._estado) !== categoriaActiva) return false
+    }
 if (categoriaActiva !== 'PENDIENTE' && categoriaActiva !== 'VENCIDO' && (fechaDesde || fechaHasta)) {
 const colFecha = categoriaActiva === 'INGRESADO'
 ? 'FECHA DE ENVÍO'
@@ -352,7 +357,9 @@ if (est === 'SOLICITADO') return true
 if (est === 'VENCIDO' && isVencidoAyerPage(c['FECHA DE VENCIMIENTO'])) return true
 if (est === 'VENCIDO' && solV.startsWith('REENVIAR_VENCIDO')) return true
 if (est === 'OBSERVADO' && solV.startsWith('REENVIAR') && !solV.startsWith('REENVIAR_VENCIDO')) return true
-return false
+    if (est === 'PENDIENTE_JOTFORM') return true   // Legal debe subir JotForm
+    if (est === 'OBSERVADO_SISTEMA') return true   // Legal debe revisar observación
+    return false
 })
 
 const ciudadesRegionLegal = regionLegal ? ciudadesDeRegion(regionLegal) : []
