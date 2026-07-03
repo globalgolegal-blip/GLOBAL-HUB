@@ -301,7 +301,6 @@ matchLugar(c)
       matchLugar(c)
     ).length
   }
-}
 return acc
 }, {})
 const contratosFiltrados = contratos.filter(c => {
