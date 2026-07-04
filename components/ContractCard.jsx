@@ -93,7 +93,6 @@ export default function ContractCard({
   const [enviandoLCR, setEnviandoLCR]                   = useState(false)
   const [enviandoLRV, setEnviandoLRV]                   = useState(false)
   const [enviandoCompletado, setEnviandoCompletado]     = useState(false)
-  const [completadoConfirmado, setCompletadoConfirmado] = useState(false)
   const [nuevaFechaLegal, setNuevaFechaLegal]           = useState('')
   // ── Modal unificado de observación Legal ──────────────────────────────────
   const [obsLegalOpen, setObsLegalOpen]                 = useState(false)
@@ -179,12 +178,16 @@ export default function ContractCard({
     finally { setEnviandoLRV(false) }
   }
   async function handleCompletadoJotform() {
-    if (enviandoCompletado || completadoConfirmado) return
+    if (enviandoCompletado) return
     setEnviandoCompletado(true)
-    // Solo visual — no modifica el Sheet. El operador confirma que subió a JotForm.
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setEnviandoCompletado(false)
-    setCompletadoConfirmado(true)
+    try {
+      // onLegalValidar → doGet→validar → col P = SI → cargarDatos() → estado VALIDADO
+      // → contrato desaparece del panel Legal (sale del filtro contratosLegal).
+      // Si falla, el card permanece y el usuario puede reintentar.
+      await onLegalValidar(contrato['ID'])
+    } finally {
+      setEnviandoCompletado(false)
+    }
   }
 
   // ── Condiciones de visibilidad de bloques ─────────────────────────────────
@@ -290,7 +293,7 @@ export default function ContractCard({
 
       {/* ── Bloque solicitud ─────────────────────────────────────────────── */}
       {(displayEstado === 'PENDIENTE' || displayEstado === 'SOLICITADO' || puedeValidarVencido)
-        && !(enModoLegal && estado === 'OBSERVADO_SISTEMA') && (
+        && !(enModoLegal && (estado === 'OBSERVADO_SISTEMA' || estado === 'PENDIENTE_JOTFORM')) && (
         <>
           <div style={{ borderTop: '0.5px solid #D3D1C7', margin: '10px 0' }} />
           {puedeValidarVencido && (
@@ -532,16 +535,16 @@ export default function ContractCard({
           </div>
           <button
             onClick={handleCompletadoJotform}
-            disabled={enviandoCompletado || completadoConfirmado}
+            disabled={enviandoCompletado}
             style={{
               width: '100%', fontSize: '11px', fontWeight: '600',
               padding: '8px 14px', borderRadius: '8px',
-              background: completadoConfirmado ? '#2A5C3A' : enviandoCompletado ? '#B4B2A9' : '#1A6B47',
+              background: enviandoCompletado ? '#B4B2A9' : '#1A6B47',
               color: 'white', border: 'none',
-              cursor: completadoConfirmado || enviandoCompletado ? 'not-allowed' : 'pointer',
+              cursor: enviandoCompletado ? 'not-allowed' : 'pointer',
             }}
           >
-            {completadoConfirmado ? '✓ JotForm subido' : enviandoCompletado ? 'Procesando...' : 'Completado — JotForm subido'}
+            {enviandoCompletado ? 'Procesando...' : 'Completado — JotForm subido'}
           </button>
         </>
       )}
