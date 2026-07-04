@@ -93,6 +93,7 @@ export default function ContractCard({
   const [enviandoLCR, setEnviandoLCR]                   = useState(false)
   const [enviandoLRV, setEnviandoLRV]                   = useState(false)
   const [enviandoCompletado, setEnviandoCompletado]     = useState(false)
+  const [completadoConfirmado, setCompletadoConfirmado] = useState(false)
   const [nuevaFechaLegal, setNuevaFechaLegal]           = useState('')
   // ── Modal unificado de observación Legal ──────────────────────────────────
   const [obsLegalOpen, setObsLegalOpen]                 = useState(false)
@@ -178,10 +179,12 @@ export default function ContractCard({
     finally { setEnviandoLRV(false) }
   }
   async function handleCompletadoJotform() {
-    if (enviandoCompletado) return
+    if (enviandoCompletado || completadoConfirmado) return
     setEnviandoCompletado(true)
-    try { await onLegalValidar(contrato['ID']) }
-    finally { setEnviandoCompletado(false) }
+    // Solo visual — no modifica el Sheet. El operador confirma que subió a JotForm.
+    await new Promise(resolve => setTimeout(resolve, 500))
+    setEnviandoCompletado(false)
+    setCompletadoConfirmado(true)
   }
 
   // ── Condiciones de visibilidad de bloques ─────────────────────────────────
@@ -529,16 +532,16 @@ export default function ContractCard({
           </div>
           <button
             onClick={handleCompletadoJotform}
-            disabled={enviandoCompletado}
+            disabled={enviandoCompletado || completadoConfirmado}
             style={{
               width: '100%', fontSize: '11px', fontWeight: '600',
               padding: '8px 14px', borderRadius: '8px',
-              background: enviandoCompletado ? '#B4B2A9' : '#1A6B47',
+              background: completadoConfirmado ? '#2A5C3A' : enviandoCompletado ? '#B4B2A9' : '#1A6B47',
               color: 'white', border: 'none',
-              cursor: enviandoCompletado ? 'not-allowed' : 'pointer',
+              cursor: completadoConfirmado || enviandoCompletado ? 'not-allowed' : 'pointer',
             }}
           >
-            {enviandoCompletado ? 'Procesando...' : 'Completado — JotForm subido'}
+            {completadoConfirmado ? '✓ JotForm subido' : enviandoCompletado ? 'Procesando...' : 'Completado — JotForm subido'}
           </button>
         </>
       )}
