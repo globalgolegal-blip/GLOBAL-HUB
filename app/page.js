@@ -192,6 +192,16 @@ export default function Dashboard() {
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
 
+  const legalCompletarJotform = useCallback(async (id) => {
+    setErrorSolicitud(null)
+    try {
+      const res = await fetch(`${SHEET_URL}?accion=completar_jotform&id=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      if (!data.ok) { setErrorSolicitud('No se pudo completar. Intenta nuevamente.'); return }
+      await cargarDatos()
+    } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
+  }, [cargarDatos])
+
   const legalMarcarPendiente = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -704,6 +714,7 @@ export default function Dashboard() {
                     legalAutenticado={legalAutenticado}
                     onLegalValidar={legalValidar}
                     onLegalObservar={legalObservar}
+                    onCompletarJotform={legalCompletarJotform}
                     onLegalMarcarPendiente={legalMarcarPendiente}
                     onLegalConfirmarReenvio={legalConfirmarReenvio}
                     onLegalReenviarVencido={legalReenviarVencido}
@@ -865,6 +876,7 @@ export default function Dashboard() {
                 legalAutenticado={legalAutenticado}
                 onLegalValidar={legalValidar}
                 onLegalObservar={legalObservar}
+                onCompletarJotform={legalCompletarJotform}
                 onLegalMarcarPendiente={legalMarcarPendiente}
                 onLegalConfirmarReenvio={legalConfirmarReenvio}
                 onLegalReenviarVencido={legalReenviarVencido}
