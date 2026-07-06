@@ -94,7 +94,7 @@ export default function Dashboard() {
   const [busquedaLegal, setBusquedaLegal] = useState('')
   const [regionLegal, setRegionLegal] = useState(null)
   const [ciudadLegal, setCiudadLegal] = useState(null)
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw_o2srYTBZg1pDQ4zeoabJT6a4jQnP06DF8soAb27bhx5fAse7pYj9f_4Yp-pOmYGLQw/exec'
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxE8kT5hBbav2OT-kiCSj3jz2xg_XW2v0y3DkUwHRBTAaaI0AgPTVHpbzL-_rHI9hhNHw/exec' // ✅ CORREGIDO: V24 (era V15)
   const cargarDatos = useCallback(async () => {
     setCargando(true)
     setError(null)
