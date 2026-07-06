@@ -181,9 +181,9 @@ export default function ContractCard({
     if (enviandoCompletado) return
     setEnviandoCompletado(true)
     try {
-      // onLegalValidar → doGet→validar → col P = SI → cargarDatos() → estado VALIDADO
-      // → contrato desaparece del panel Legal (sale del filtro contratosLegal).
-      // Si falla, el card permanece y el usuario puede reintentar.
+      // onLegalValidar → doGet→validar → guard detecta col P = SI + col W = PENDIENTE
+      // → escribe COMPLETADO en col W → cargarDatos() → derivarEstado: VALIDADO
+      // → contrato desaparece del panel Legal. Si falla, el card queda y se puede reintentar.
       await onLegalValidar(contrato['ID'])
     } finally {
       setEnviandoCompletado(false)
