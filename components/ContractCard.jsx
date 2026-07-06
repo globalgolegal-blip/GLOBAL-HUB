@@ -185,7 +185,7 @@ export default function ContractCard({
       // onLegalValidar → doGet→validar → guard detecta col P = SI + col W = PENDIENTE
       // → escribe COMPLETADO en col W → cargarDatos() → derivarEstado: VALIDADO
       // → contrato desaparece del panel Legal. Si falla, el card queda y se puede reintentar.
-      await onCompletarJotform(contrato.id)
+      await onCompletarJotform(contrato['ID'])
     } finally {
       setEnviandoCompletado(false)
     }
