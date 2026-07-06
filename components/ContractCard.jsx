@@ -80,6 +80,7 @@ export default function ContractCard({
   legalAutenticado,
   onLegalValidar,
   onLegalObservar,
+  onCompletarJotform,
   onLegalMarcarPendiente,
   onLegalConfirmarReenvio,
   onLegalReenviarVencido,
@@ -184,7 +185,7 @@ export default function ContractCard({
       // onLegalValidar → doGet→validar → guard detecta col P = SI + col W = PENDIENTE
       // → escribe COMPLETADO en col W → cargarDatos() → derivarEstado: VALIDADO
       // → contrato desaparece del panel Legal. Si falla, el card queda y se puede reintentar.
-      await onLegalValidar(contrato['ID'])
+      await onCompletarJotform(contrato.id)
     } finally {
       setEnviandoCompletado(false)
     }
