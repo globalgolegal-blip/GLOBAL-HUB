@@ -19,6 +19,7 @@ export default function ContractList({
   contratos, onSolicitarValidacion, acAutenticado,
   onSolicitarReenvio, onSolicitarReenvioVencido,
   legalAutenticado, onLegalValidar, onLegalObservar,
+  onCompletarJotform,
   onLegalMarcarPendiente, onLegalConfirmarReenvio, onLegalReenviarVencido,
 }) {
   const sorted = [...contratos].sort((a, b) => {
@@ -46,6 +47,7 @@ export default function ContractList({
           legalAutenticado={legalAutenticado}
           onLegalValidar={onLegalValidar}
           onLegalObservar={onLegalObservar}
+          onCompletarJotform={onCompletarJotform}
           onLegalMarcarPendiente={onLegalMarcarPendiente}
           onLegalConfirmarReenvio={onLegalConfirmarReenvio}
           onLegalReenviarVencido={onLegalReenviarVencido}
