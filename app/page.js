@@ -99,7 +99,7 @@ export default function Dashboard() {
     setCargando(true)
     setError(null)
     try {
-      const res = await fetch(SHEET_URL)
+      const res = await fetch(`${SHEET_URL}?_t=${Date.now()}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const filas = await res.json()
       if (filas.error) throw new Error(filas.error)
