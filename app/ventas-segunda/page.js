@@ -222,11 +222,18 @@ export default function VentasSegundaPage() {
                   borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
                 🏍️ ¿Qué moto vender?
               </a>
+              href="https://docs.google.com/forms/d/e/1FAIpQLSe5NipvzTzy5YDNVjD2rNzbHYMDAgBcPRzSnAGlfk-kIxe6NQ/viewform?usp=dialog"
+                target="_blank" rel="noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
+                  color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
+                  borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
+                📋 Formulario
+              </a>
               <a href="/"
                 style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
                   color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
                   borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
-                {'← Desembolso'}               </a>               <a href="https://docs.google.com/forms/d/e/1FAIpQLSe5NipvzTzy5YDNVjD2rNzbHYMDAgBcPRzSnAGlfk-kIxe6NQ/viewform?usp=dialog"                 target="_blank" rel="noreferrer"                 style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,                   color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',                   borderRadius: 6, border: '0.5px solid #2D3A5A' }}>                 📋 Formulario
+                {'← Desembolso'}
               </a>
             </div>
           </div>
