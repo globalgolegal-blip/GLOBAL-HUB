@@ -8,6 +8,7 @@ import { autenticarVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
 import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
+import Icon from '../../components/Icon'
 import { hoyISO, mananaISO, ayerISO } from '../../lib/fechas'
 
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
@@ -168,75 +169,47 @@ export default function VentasSegundaPage() {
       <header style={{ backgroundColor: NAVY, position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 512, margin: '0 auto', padding: '10px 16px 0' }}>
 
-          {/* Fila principal */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8 }}>
-            <h1 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0 }}>GoTrack</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Fila 1: marca + acciones */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 8 }}>
+            <div>
+              <div style={{ color: 'white', fontWeight: 500, fontSize: 15, lineHeight: 1.1 }}>GoTrack</div>
+              <div style={{ color: '#9BB4D8', fontSize: 11 }}>Ventas de segunda</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <button onClick={() => cargarVentas(false)} disabled={cargando || actualizando} title="Actualizar" aria-label="Actualizar"
+                style={{ background: 'transparent', border: 'none', color: '#9BB4D8', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
+                <Icon name="refresh" size={18} />
+              </button>
               {usuario ? (
-                <>
-                  <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>{usuario.nombre}</span>
-                  <button onClick={() => cargarVentas(false)} disabled={cargando || actualizando} title="Actualizar"
-                    style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 16, cursor: 'pointer' }}>
-                    🔄
-                  </button>
-                  <button onClick={cerrarSesion}
-                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 6,
-                      color: 'rgba(255,255,255,0.7)', fontSize: 11, cursor: 'pointer', padding: '3px 8px' }}>
-                    Salir
-                  </button>
-                </>
+                <button onClick={cerrarSesion} title="Cerrar sesion"
+                  style={{ background: 'transparent', border: 'none', color: '#9BB4D8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                  <Icon name="user-circle" size={18} /> {usuario.nombre}
+                </button>
               ) : (
-                <>
-                  <button onClick={() => cargarVentas(false)} disabled={cargando || actualizando} title="Actualizar"
-                    style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 15, cursor: 'pointer' }}>
-                    🔄
-                  </button>
-                  <button onClick={() => setLogin(v => !v)}
-                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6,
-                      color: 'rgba(255,255,255,0.6)', fontSize: 11, cursor: 'pointer', padding: '3px 8px' }}>
-                    🔐 Identificarse
-                  </button>
-                </>
+                <button onClick={() => setLogin(v => !v)} title="Identificarse" aria-label="Identificarse"
+                  style={{ background: 'transparent', border: 'none', color: '#9BB4D8', cursor: 'pointer', display: 'inline-flex' }}>
+                  <Icon name="lock" size={18} />
+                </button>
               )}
             </div>
           </div>
 
-          {/* Tabs Lista / Agenda + links */}
+          {/* Fila 2: vista Lista/Agenda + volver a Desembolso */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 18 }}>
               {['lista', 'agenda'].map(v => (
                 <button key={v} onClick={() => setVista(v)}
-                  style={{
-                    fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6,
-                    border: 'none', cursor: 'pointer',
-                    background: vista === v ? 'white' : 'rgba(255,255,255,0.15)',
-                    color:      vista === v ? NAVY   : 'rgba(255,255,255,0.7)',
-                  }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 6px',
+                    fontSize: 12, color: vista === v ? '#fff' : '#9BB4D8',
+                    borderBottom: vista === v ? '2px solid #fff' : '2px solid transparent' }}>
                   {v === 'lista' ? 'Lista' : 'Agenda'}
                 </button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <a href="https://gobot-leg.github.io/GOBOT/gobot_faq_74.html" target="_blank" rel="noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
-                  color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
-                  borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
-                🏍️ ¿Qué moto vender?
-              </a>
-              <a href="https://docs.google.com/forms/d/e/1FAIpQLSe5NipvzTzy5YDNVjD2rNzbHYMDAgBcPRzSnAGlfk-kIxe6NQ/viewform?usp=header"
-                target="_blank" rel="noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
-                  color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
-                  borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
-                📋 Formulario
-              </a>
-              <a href="/"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500,
-                  color: '#9BB4D8', textDecoration: 'none', padding: '4px 8px',
-                  borderRadius: 6, border: '0.5px solid #2D3A5A' }}>
-                {'← Desembolso'}
-              </a>
-            </div>
+            <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500,
+              color: '#9BB4D8', textDecoration: 'none', padding: '4px 10px', borderRadius: 8, border: '0.5px solid #2D3A5A' }}>
+              <Icon name="arrow-left" size={14} /> Desembolso
+            </a>
           </div>
 
           {/* Panel de login inline (desplegable) */}
@@ -272,6 +245,22 @@ export default function VentasSegundaPage() {
           )}
 
         </div>
+
+        {/* Franja de utilidades */}
+        <div style={{ background: 'white', borderTop: '0.5px solid #E8E6DF' }}>
+          <div style={{ maxWidth: 512, margin: '0 auto', padding: '8px 16px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSe5NipvzTzy5YDNVjD2rNzbHYMDAgBcPRzSnAGlfk-kIxe6NQ/viewform?usp=header" target="_blank" rel="noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F1EFE8', color: '#444441',
+                border: '0.5px solid #D3D1C7', borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
+              <Icon name="forms" size={16} /> Registrar venta
+            </a>
+            <a href="https://gobot-leg.github.io/GOBOT/gobot_faq_74.html" target="_blank" rel="noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F1EFE8', color: '#444441',
+                border: '0.5px solid #D3D1C7', borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
+              <Icon name="motorbike" size={16} /> Qué moto vender
+            </a>
+          </div>
+        </div>
       </header>
 
       {/* CONTENIDO — condicional por vista */}
@@ -290,41 +279,26 @@ export default function VentasSegundaPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <AlertCard
-              label="DOCS OBSERVADOS" count={stats.docsObservados}
-              color="#DC2626" borderColor="#FCA5A5"
-              estado="DOCS_OBSERVADOS" activo={filtroEstado} onToggle={toggleFiltro}
-            />
-            <AlertCard
-              label="SUBSANADOS" count={stats.docsSubsanados}
-              color="#065F46" borderColor="#6EE7B7"
-              estado="DOCS_SUBSANADOS" activo={filtroEstado} onToggle={toggleFiltro}
-            />
-            <AlertCard
-              label="REAGENDAS" count={stats.reagendar}
-              color="#B45309" borderColor="#FCD34D"
-              estado="PENDIENTE_REAGENDA" activo={filtroEstado} onToggle={toggleFiltro}
-            />
+          {/* Urgentes */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <UrgentCard label="Docs observados" count={stats.docsObservados} color="#E24B4A"
+              estado="DOCS_OBSERVADOS" activo={filtroEstado} onToggle={toggleFiltro} />
+            <UrgentCard label="Reagendas" count={stats.reagendar} color="#BA7517"
+              estado="PENDIENTE_REAGENDA" activo={filtroEstado} onToggle={toggleFiltro} />
+            {stats.docsSubsanados > 0 && (
+              <UrgentCard label="Subsanados" count={stats.docsSubsanados} color="#0F6E56"
+                estado="DOCS_SUBSANADOS" activo={filtroEstado} onToggle={toggleFiltro} />
+            )}
           </div>
 
-          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #D9D4C8',
-            padding: '10px 8px', marginBottom: 12, overflowX: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', minWidth: 'max-content' }}>
-              <PipelineStep label="Ingresados" count={stats.ingresados} estado="INGRESADO" activo={filtroEstado} onToggle={toggleFiltro} />
-              <PipelineArr />
-              <PipelineStep label="Confirmados" count={stats.confirmados} estado="CONFIRMADO" activo={filtroEstado} onToggle={toggleFiltro} />
-              <PipelineArr />
-              <PipelineStep label="Cita agendada" count={stats.agendados} estado="EN_CITA" activo={filtroEstado} onToggle={toggleFiltro} />
-              <PipelineArr />
-              <PipelineStep label="Cita OK" count={stats.citaConfirmada} estado="CITA_CONFIRMADA" activo={filtroEstado} onToggle={toggleFiltro} />
-              <PipelineArr />
-              <PipelineStep label="GM Solic." count={stats.gmSolicitada} estado="GM_SOLICITADA" activo={filtroEstado} onToggle={toggleFiltro} />
-              <PipelineArr />
-              <PipelineStep label="GM Levant." count={stats.gmLevantada} estado="GM_LEVANTADA" activo={filtroEstado} onToggle={toggleFiltro} />
-              <PipelineArr />
-              <PipelineStep label="Firmados" count={stats.firmados} estado="FIRMADO" activo={filtroEstado} onToggle={toggleFiltro} />
-            </div>
+          {/* Flujo en grilla */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+            <StageCard label="Ingresados" count={stats.ingresados} color="#378ADD" estado="INGRESADO" activo={filtroEstado} onToggle={toggleFiltro} />
+            <StageCard label="Confirmados" count={stats.confirmados} color="#BA7517" estado="CONFIRMADO" activo={filtroEstado} onToggle={toggleFiltro} />
+            <StageCard label="En cita" count={stats.agendados} color="#0F6E56" estado="EN_CITA" activo={filtroEstado} onToggle={toggleFiltro} />
+            <StageCard label="Cita OK" count={stats.citaConfirmada} color="#534AB7" estado="CITA_CONFIRMADA" activo={filtroEstado} onToggle={toggleFiltro} />
+            <StageCard label="GM levant." count={stats.gmLevantada} color="#0F6E56" estado="GM_LEVANTADA" activo={filtroEstado} onToggle={toggleFiltro} />
+            <StageCard label="Firmados" count={stats.firmados} color="#639922" estado="FIRMADO" activo={filtroEstado} onToggle={toggleFiltro} />
           </div>
 
           {actualizando && (
@@ -401,53 +375,35 @@ export default function VentasSegundaPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// AlertCard
+// UrgentCard + StageCard (estados)
 // ─────────────────────────────────────────────────────────────────
-function AlertCard({ label, count, color, borderColor, estado, activo, onToggle }) {
+function UrgentCard({ label, count, color, estado, activo, onToggle }) {
   const isActive = activo === estado
   return (
     <div onClick={() => onToggle(estado)} style={{
-      flex: 1,
-      background: isActive ? color + '12' : 'white',
-      border: `1.5px solid ${isActive ? color : borderColor}`,
-      borderRadius: 12,
-      padding: '12px 14px',
-      cursor: 'pointer',
-      transition: 'border 0.12s, background 0.12s',
+      flex: 1, background: 'white', borderRadius: 12, cursor: 'pointer',
+      border: isActive ? `2px solid ${color}` : '0.5px solid #D3D1C7',
+      borderLeft: `4px solid ${color}`,
+      padding: '8px 12px', transition: 'border 0.12s',
     }}>
-      <div style={{ fontSize: 32, fontWeight: 700, color: '#1A2238', lineHeight: 1 }}>{count}</div>
-      <div style={{ fontSize: 9, fontWeight: 700, color, textTransform: 'uppercase',
-        letterSpacing: '0.06em', marginTop: 5 }}>
-        ● {label}
-      </div>
+      <div style={{ fontSize: 18, fontWeight: 500, color: '#1A2238', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: 12, color, marginTop: 3 }}>{label}</div>
     </div>
   )
 }
-
-// ─────────────────────────────────────────────────────────────────
-// PipelineStep + PipelineArr
-// ─────────────────────────────────────────────────────────────────
-function PipelineStep({ label, count, estado, activo, onToggle }) {
+function StageCard({ label, count, color, estado, activo, onToggle }) {
   const isActive = activo === estado
   return (
     <div onClick={() => onToggle(estado)} style={{
-      textAlign: 'center',
-      padding: '4px 10px',
-      borderRadius: 8,
-      cursor: 'pointer',
-      background: isActive ? '#EFF6FF' : 'transparent',
-      transition: 'background 0.12s',
+      background: 'white', borderRadius: 12, cursor: 'pointer',
+      border: isActive ? '2px solid #1A2238' : '0.5px solid #D3D1C7',
+      borderLeft: `4px solid ${color}`,
+      padding: '8px 10px', transition: 'border 0.12s',
     }}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1A2238' }}>{count}</div>
-      <div style={{ fontSize: 8, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase',
-        letterSpacing: '0.04em', marginTop: 2, whiteSpace: 'nowrap' }}>
-        {label}
-      </div>
+      <div style={{ fontSize: 18, fontWeight: 500, color: '#1A2238', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: 12, color, marginTop: 3 }}>{label}</div>
     </div>
   )
-}
-function PipelineArr() {
-  return <span style={{ color: '#D9D4C8', fontSize: 16, padding: '0 1px', userSelect: 'none' }}>›</span>
 }
 
 // ─────────────────────────────────────────────────────────────────
