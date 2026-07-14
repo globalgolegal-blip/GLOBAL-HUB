@@ -226,6 +226,7 @@ export default function VentasSegundaPage() {
                   onChange={e => { setPinInput(e.target.value); setPinError('') }}
                   onKeyDown={e => e.key === 'Enter' && verificarPin()}
                   placeholder="PIN"
+                  aria-label="PIN de área"
                   autoComplete="off"
                   style={{ flex: 1, border: pinError ? '1.5px solid #EF4444' : '1.5px solid #3D4F72',
                     borderRadius: 6, padding: '8px 12px', fontSize: 14,
@@ -308,14 +309,14 @@ export default function VentasSegundaPage() {
           )}
 
           <div style={{ marginBottom: 12, position: 'relative' }}>
-            <input type="search" value={busqueda}
+            <input type="search" value={busqueda} aria-label="Buscar ventas"
               onChange={e => setBusqueda(e.target.value)}
               placeholder="Buscar por placa, nombre o DNI..."
               style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D1D5DB',
                 borderRadius: 8, padding: '9px 14px 9px 36px', fontSize: 13,
                 background: 'white', outline: 'none' }} />
             <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
-              color: '#9CA3AF', pointerEvents: 'none' }}>🔍</span>
+              color: '#9CA3AF', pointerEvents: 'none', display: 'inline-flex' }}><Icon name="search" size={16} /></span>
           </div>
 
           {cargando && (
@@ -435,10 +436,10 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 16px',
       }}>
-        <button onClick={() => onMoverDia(-1)}
+        <button onClick={() => onMoverDia(-1)} aria-label="Día anterior"
           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
-            borderRadius: 6, padding: '6px 14px', fontSize: 18, cursor: 'pointer', fontWeight: 600 }}>
-          ‹
+            borderRadius: 6, padding: '6px 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+          <Icon name="arrow-left" size={18} />
         </button>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: 'white', fontSize: 13, fontWeight: 500 }}>{labelDia(fecha)}</div>
@@ -448,10 +449,10 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
               : `${total} cita${total > 1 ? 's' : ''} programada${total > 1 ? 's' : ''}`}
           </div>
         </div>
-        <button onClick={() => onMoverDia(1)}
+        <button onClick={() => onMoverDia(1)} aria-label="Día siguiente"
           style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
-            borderRadius: 6, padding: '6px 14px', fontSize: 18, cursor: 'pointer', fontWeight: 600 }}>
-          ›
+            borderRadius: 6, padding: '6px 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+          <Icon name="arrow-right" size={18} />
         </button>
       </div>
 
@@ -543,8 +544,8 @@ function BloqueTurno({ label, slots, mapaHora }) {
               <SlotOcupado venta={entries[0].venta} estado={entries[0].estado} />
             ) : (
               <div style={{ flex: 1, borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', padding: '8px 12px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#DC2626', marginBottom: 4 }}>
-                  {'⚠ ' + entries.length + ' citas en conflicto en este horario'}
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="alert-triangle" size={14} />{entries.length + ' citas en conflicto en este horario'}
                 </div>
                 {entries.map((e, i) => (
                   <div key={i} style={{ fontSize: 12, color: '#374151' }}>
