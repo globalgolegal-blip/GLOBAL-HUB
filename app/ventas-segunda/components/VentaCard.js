@@ -13,24 +13,29 @@ import {
   validarReglaDiaAnterior,
 } from '../../../lib/ventas-segunda/utils'
 import { getPermisos } from '../../../lib/auth'
+import Icon from '../../../components/Icon'
 
 const VS_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
 const NAVY   = '#1A2238'
 
 // ── Helpers de UI ────────────────────────────────────────────
 
-function Btn({ onClick, disabled, color = NAVY, children, small }) {
+function Btn({ onClick, disabled, color = NAVY, children, small, icon, outline }) {
+  const base = {
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    borderRadius: 8, cursor: disabled ? 'not-allowed' : 'pointer',
+    padding: small ? '6px 10px' : '8px 14px',
+    fontSize: small ? 12 : 13, fontWeight: 500,
+    transition: 'background 0.12s, border-color 0.12s',
+  }
+  const style = outline
+    ? { ...base, background: '#fff', color: disabled ? '#B4B2A9' : color,
+        border: `0.5px solid ${disabled ? '#E8E6DF' : '#D3D1C7'}` }
+    : { ...base, background: disabled ? '#E5E7EB' : color,
+        color: disabled ? '#9CA3AF' : 'white', border: 'none' }
   return (
-    <button onClick={onClick} disabled={disabled}
-      style={{
-        background: disabled ? '#E5E7EB' : color,
-        color:      disabled ? '#9CA3AF' : 'white',
-        border: 'none', borderRadius: 6,
-        padding: small ? '5px 10px' : '7px 14px',
-        fontSize: small ? 11 : 12, fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.7 : 1,
-      }}>
+    <button onClick={onClick} disabled={disabled} style={style}>
+      {icon && <Icon name={icon} size={small ? 14 : 16} />}
       {children}
     </button>
   )
@@ -69,7 +74,7 @@ function LinkDoc({ url, label, highlight }) {
       {urls.map((u, i) => (
         <a key={i} href={normalizarDriveUrl(u)} target="_blank"
            rel="noopener noreferrer" style={estiloLink}>
-          {highlight ? '✅' : '📎'} {label}{urls.length > 1 ? ` ${i + 1}` : ''}
+          <Icon name={highlight ? 'check' : 'paperclip'} size={13} style={{ marginRight: 3 }} />{label}{urls.length > 1 ? ` ${i + 1}` : ''}
         </a>
       ))}
     </span>
@@ -301,7 +306,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
           mimeType:    file.type,
         }),
       })
-      setMsg({ tipo: 'ok', texto: '✅ Boleta enviada — se verá al próximo refresco.' })
+      setMsg({ tipo: 'ok', texto: 'Boleta enviada — se verá al próximo refresco.' })
       setTimeout(() => { setMsg(null); onActualizar?.() }, 3000)
     } catch (e) {
       setMsg({ tipo: 'err', texto: 'Error al subir: ' + e.message })
@@ -333,7 +338,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
           mimeType:   file.type,
         }),
       })
-      setMsg({ tipo: 'ok', texto: '✅ Documento enviado — se verá al próximo refresco.' })
+      setMsg({ tipo: 'ok', texto: 'Documento enviado — se verá al próximo refresco.' })
       setTimeout(() => { setMsg(null); onActualizar?.() }, 3000)
     } catch (e) {
       setMsg({ tipo: 'err', texto: 'Error al subir: ' + e.message })
@@ -351,8 +356,8 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   // ── Render ─────────────────────────────────────────────────
   return (
     <div style={{ background: 'white', borderRadius: 12, marginBottom: 10,
-      border: '1px solid rgba(0,0,0,0.07)', overflow: 'hidden',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+      border: '0.5px solid #D3D1C7', borderLeft: `4px solid ${cfg.borderBadge || '#D3D1C7'}`,
+      overflow: 'hidden' }}>
 
       {/* Cabecera siempre visible */}
       <div onClick={() => setExpandido(v => !v)}
@@ -374,13 +379,13 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {enCalificacion && !enProceso && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
                 color: '#7C3AED', background: '#F5F3FF', border: '1px solid #C4B5FD' }}>
-                📋 EN CALIFICACIÓN
+                EN CALIFICACIÓN
               </span>
             )}
             {datosInvalidos && estado !== 'CONTENIDO_OBSERVADO' && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
                 color: '#5B21B6', background: '#EDE9FE', border: '1px solid #A78BFA' }}>
-                ⚠ Datos inválidos
+                Datos inválidos
               </span>
             )}
           </div>
@@ -409,12 +414,12 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {venta.SIN_CITA && <InfoRow label="Sin cita" value="Sí — directo a firma" />}
             {dniInvalido && (
               <div style={{ gridColumn: '1/-1', fontSize: 11, color: '#5B21B6', fontWeight: 500 }}>
-                ⚠ DNI/CE inválido — debe contener solo dígitos
+                DNI/CE inválido — debe contener solo dígitos
               </div>
             )}
             {telefonoInvalido && (
               <div style={{ gridColumn: '1/-1', fontSize: 11, color: '#5B21B6', fontWeight: 500 }}>
-                ⚠ Teléfono inválido — debe contener solo dígitos
+                Teléfono inválido — debe contener solo dígitos
               </div>
             )}
             {venta.OBSERVACION_DOCS && (
@@ -450,7 +455,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
               borderRadius: 8, padding: '8px 12px' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#92400E',
                 textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-                👫 Sociedad Conyugal
+                Sociedad Conyugal
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 12px' }}>
                 <InfoRow label="Cónyuge"   value={venta.NOMBRE_CONYUGE} />
@@ -494,14 +499,14 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             <div style={{ marginTop: 12 }}>
               <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 3 }}>
-                  {'⚠ Placa duplicada — expediente bloqueado'}
+                  {'Placa duplicada — expediente bloqueado'}
                 </div>
                 <div style={{ fontSize: 11, color: '#991B1B', lineHeight: 1.4, marginBottom: rol === 'legal' ? 8 : 0 }}>
                   {'Hay más de un expediente activo con esta placa. Compara los datos y, si eres Legal, anula el que no corresponda.'}
                 </div>
                 {rol === 'legal' && (
-                  <Btn onClick={anularExpediente} disabled={cargando} color="#DC2626">
-                    {cargando ? 'Anulando…' : '🗑 Anular este expediente'}
+                  <Btn onClick={anularExpediente} disabled={cargando} color="#DC2626" icon="x">
+                    {cargando ? 'Anulando…' : 'Anular este expediente'}
                   </Btn>
                 )}
               </div>
@@ -521,8 +526,8 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     color="#5B21B6"
                   >
                     {estado === 'CONTENIDO_OBSERVADO'
-                      ? '✏️ Corregir datos — solicitado por Legal'
-                      : '✏️ Corregir datos inválidos'}
+                      ? 'Corregir datos — solicitado por Legal'
+                      : 'Corregir datos inválidos'}
                   </Btn>
                 ) : (
                   <div style={{ background: '#F5F3FF', border: '1px solid #A78BFA',
@@ -531,7 +536,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     <div style={{ display: 'flex', justifyContent: 'space-between',
                       alignItems: 'center', marginBottom: 8 }}>
                       <p style={{ fontSize: 12, color: '#5B21B6', margin: 0, fontWeight: 700 }}>
-                        ✏️ Corrección de datos del expediente
+                        Corrección de datos del expediente
                       </p>
                       <button onClick={() => setEditDatosOpen(false)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer',
@@ -543,7 +548,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                       <p style={{ fontSize: 11, color: '#374151', margin: '0 0 10px',
                         background: '#EDE9FE', borderRadius: 4, padding: '5px 8px',
                         border: '1px solid #C4B5FD' }}>
-                        📋 Legal indica: {textoContObs}
+                        Legal indica: {textoContObs}
                       </p>
                     )}
 
@@ -608,7 +613,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                           flexDirection: 'column', gap: 6 }}>
                           <p style={{ fontSize: 10, color: '#92400E', margin: 0,
                             fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            👫 Datos del cónyuge
+                            Datos del cónyuge
                           </p>
                           <div>
                             <label style={{ display: 'block', fontSize: 10, color: '#6B7280',
@@ -649,9 +654,9 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                         }
                         color="#5B21B6"
                       >
-                        {cargando ? 'Guardando…' : '✅ Enviar corrección'}
+                        {cargando ? 'Guardando…' : 'Enviar corrección'}
                       </Btn>
-                      <Btn onClick={() => setEditDatosOpen(false)} color="#6B7280" small>Cancelar</Btn>
+                      <Btn onClick={() => setEditDatosOpen(false)} color="#6B7280" small outline>Cancelar</Btn>
                     </div>
 
                   </div>
@@ -663,7 +668,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {!rol && estado === 'DOCS_OBSERVADOS' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <Btn onClick={() => fileRefSubs.current?.click()} disabled={subiendoSubsanacion} color="#0F766E">
-                  {subiendoSubsanacion ? 'Subiendo…' : venta.SUBSANACION_URL ? '🔄 Reemplazar doc subsanado' : '📤 Subir documento subsanado'}
+                  {subiendoSubsanacion ? 'Subiendo…' : venta.SUBSANACION_URL ? 'Reemplazar doc subsanado' : 'Subir documento subsanado'}
                 </Btn>
                 <input
                   ref={fileRefSubs}
@@ -686,7 +691,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                 {!agendaOpen ? (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <Btn onClick={() => setAgendaOpen(true)} color="#2563EB">
-                      {estado === 'PENDIENTE_REAGENDA' ? '🔄 Reagendar cita' : '📅 Agendar cita'}
+                      {estado === 'PENDIENTE_REAGENDA' ? 'Reagendar cita' : '📅 Agendar cita'}
                     </Btn>
                   </div>
                 ) : (
@@ -703,24 +708,24 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     </div>
                     {fechaCita && horaCita && !rangoValido && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ Horario no permitido. Citas solo de 09:15–12:30 y 14:15–16:30.
+                        Horario no permitido. Citas solo de 09:15–12:30 y 14:15–16:30.
                       </p>
                     )}
                     {fechaCita && horaCita && rangoValido && !anticipacionValida && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ La cita debe agendarse con al menos 1 hora y 30 minutos de anticipación.
+                        La cita debe agendarse con al menos 1 hora y 30 minutos de anticipación.
                       </p>
                     )}
                     {fechaCita && horaCita && rangoValido && anticipacionValida && !reglaDiaAnterior && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        ⚠ Fuera de horario: para citas del proximo dia habil solo se permiten horarios desde las 11:00.
+                        Fuera de horario: para citas del proximo dia habil solo se permiten horarios desde las 11:00.
                       </p>
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <Btn onClick={agendarCita} disabled={!citaValida || cargando} color="#2563EB">
+                      <Btn onClick={agendarCita} disabled={!citaValida || cargando} color="#2563EB" icon="check">
                         Confirmar
                       </Btn>
-                      <Btn onClick={() => setAgendaOpen(false)} color="#6B7280" small>Cancelar</Btn>
+                      <Btn onClick={() => setAgendaOpen(false)} color="#6B7280" small outline>Cancelar</Btn>
                     </div>
                   </div>
                 )}
@@ -731,24 +736,24 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {rol === 'tesoreria' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'INGRESADO' && puedeAccion('confirmar_a_notaria') && (
-                  <Btn onClick={confirmarANotaria} disabled={cargando} color="#0F766E">
-                    ✅ Confirmar a Notaría
+                  <Btn onClick={confirmarANotaria} disabled={cargando} color="#0F766E" icon="check">
+                    Confirmar a Notaría
                   </Btn>
                 )}
                 {puedeObservar && !obsOpen && (
-                  <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
+                  <Btn onClick={() => setObsOpen(true)} color="#9D174D" small outline icon="eye">Observar docs</Btn>
                 )}
                 {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
-                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
+                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>Docs subsanados</Btn>
                 )}
                 {estado === 'DOCS_SUBSANADOS' && areaObs === 'TESORERÍA' && puedeAccion('confirmar_subsanacion') && (
                   <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
-                    ✅ Confirmar subsanación
+                    Confirmar subsanación
                   </Btn>
                 )}
                 {/* Boleta — siempre disponible para Tesorería */}
-                <Btn onClick={() => fileRef.current?.click()} disabled={subiendoBoleta} color="#6D28D9" small>
-                  {subiendoBoleta ? 'Subiendo…' : venta.BOLETA_URL ? '🔄 Reemplazar boleta' : '⬆ Subir boleta'}
+                <Btn onClick={() => fileRef.current?.click()} disabled={subiendoBoleta} color="#6D28D9" small outline icon="upload">
+                  {subiendoBoleta ? 'Subiendo…' : venta.BOLETA_URL ? 'Reemplazar boleta' : 'Subir boleta'}
                 </Btn>
                 <input
                   ref={fileRef}
@@ -765,12 +770,12 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'EN_CITA' && puedeAccion('confirmar_cita') && (
                   <div>
-                    <Btn onClick={confirmarCitaAct} disabled={cargando} color="#0F766E">
-                      ✅ Confirmar cita
+                    <Btn onClick={confirmarCitaAct} disabled={cargando} color="#0F766E" icon="check">
+                      Confirmar cita
                     </Btn>
                   </div>
                 )}            {puedeAccion('reagendar') && (estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA' || estado === 'DOCS_OBSERVADOS') && !reagendarOpen && (
-              <Btn onClick={() => setReagendarOpen(true)} color="#D97706" small>Reagendar cita</Btn>
+              <Btn onClick={() => setReagendarOpen(true)} color="#D97706" small outline icon="refresh">Reagendar cita</Btn>
             )}
 
                 {/* Solicitar GM:
@@ -780,8 +785,8 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   (estado === 'CITA_CONFIRMADA') ||
                   (estado === 'FIRMADO' && enCalificacion)
                 ) && (
-                  <Btn onClick={solicitarGM} disabled={cargando} color="#7C3AED" small>
-                    ⚠ Solicitar levant. GM
+                  <Btn onClick={solicitarGM} disabled={cargando} color="#7C3AED" small icon="alert-triangle">
+                    Solicitar levant. GM
                   </Btn>
                 )}
                 {/* Registrar firma:
@@ -796,19 +801,19 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     estado === 'GM_LEVANTADA'
                   ))
                 ) && (
-                  <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small>
-                    ✍ Registrar firma
+                  <Btn onClick={firmar} disabled={cargando} color="#1D4ED8" small icon="check">
+                    Registrar firma
                   </Btn>
                 )}
                 {puedeObservar && !obsOpen && (
-                  <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
+                  <Btn onClick={() => setObsOpen(true)} color="#9D174D" small outline icon="eye">Observar docs</Btn>
                 )}
                 {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
-                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
+                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>Docs subsanados</Btn>
                 )}
                 {estado === 'DOCS_SUBSANADOS' && areaObs === 'NOTARÍA' && puedeAccion('confirmar_subsanacion') && (
                   <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
-                    ✅ Confirmar subsanación
+                    Confirmar subsanación
                   </Btn>
                 )}
             {reagendarOpen && (
@@ -819,7 +824,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #FCD34D', borderRadius: 6, padding: '7px 10px', fontSize: 12, resize: 'vertical' }} />
                 <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                   <Btn onClick={reagendarAct} disabled={!reagendarMotivo.trim() || cargando} color="#D97706">Guardar</Btn>
-                  <Btn onClick={() => { setReagendarOpen(false); setReagendarMotivo('') }} color="#6B7280" small>Cancelar</Btn>
+                  <Btn onClick={() => { setReagendarOpen(false); setReagendarMotivo('') }} color="#6B7280" small outline>Cancelar</Btn>
                 </div>
               </div>
             )}
@@ -831,23 +836,23 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {/* GM pendiente de levantar — Legal responde con este botón */}
                 {venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
-                  <Btn onClick={levantarGM} disabled={cargando} color="#065F46">
-                    ✅ GM Levantada
+                  <Btn onClick={levantarGM} disabled={cargando} color="#065F46" icon="check">
+                    GM Levantada
                   </Btn>
                 )}
                 {/* Inscripción en RRPP — Legal inscribe luego de que Notaría firmó */}
                 {venta.FECHA_FIRMA && !venta.FECHA_INSCRIPCION && puedeAccion('inscribir') && (
-                  <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small>📋 Inscribir RRPP</Btn>
+                  <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small icon="forms">Inscribir RRPP</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
-                  <Btn onClick={() => setObsOpen(true)} color="#9D174D" small>Observar docs</Btn>
+                  <Btn onClick={() => setObsOpen(true)} color="#9D174D" small outline icon="eye">Observar docs</Btn>
                 )}
                 {estado === 'DOCS_OBSERVADOS' && puedeAccion('marcar_subsanado') && (
-                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>📋 Docs subsanados</Btn>
+                  <Btn onClick={marcarSubsanado} disabled={cargando} color="#0F766E" small>Docs subsanados</Btn>
                 )}
                 {estado === 'DOCS_SUBSANADOS' && areaObs === 'LEGAL' && puedeAccion('confirmar_subsanacion') && (
                   <Btn onClick={confirmarSubsanacion} disabled={cargando} color="#065F46">
-                    ✅ Confirmar subsanación
+                    Confirmar subsanación
                   </Btn>
                 )}
                 {/* Observar contenido — disponible cuando no hay observación activa */}
@@ -862,7 +867,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     }}
                     color="#5B21B6" small
                   >
-                    {datosInvalidos ? '⚠ Observar datos inválidos' : '📝 Observar contenido'}
+                    {datosInvalidos ? 'Observar datos inválidos' : '📝 Observar contenido'}
                   </Btn>
                 )}
               </div>
@@ -884,7 +889,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   <Btn onClick={enviarObservacion} disabled={!obsTexto.trim() || cargando} color="#9D174D">
                     Guardar
                   </Btn>
-                  <Btn onClick={() => setObsOpen(false)} color="#6B7280" small>Cancelar</Btn>
+                  <Btn onClick={() => setObsOpen(false)} color="#6B7280" small outline>Cancelar</Btn>
                 </div>
               </div>
             )}
@@ -908,7 +913,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   <Btn onClick={enviarObsContenido} disabled={!contObsTexto.trim() || cargando} color="#5B21B6">
                     Registrar observación
                   </Btn>
-                  <Btn onClick={() => setContObsOpen(false)} color="#6B7280" small>Cancelar</Btn>
+                  <Btn onClick={() => setContObsOpen(false)} color="#6B7280" small outline>Cancelar</Btn>
                 </div>
               </div>
             )}
