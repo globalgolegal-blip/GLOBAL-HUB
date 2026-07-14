@@ -3,6 +3,7 @@
 
 import { derivarEstadoVS, ESTADO_CONFIG_VS } from '../../../lib/ventas-segunda/utils'
 import VentaCard from './VentaCard'
+import Icon from '../../../components/Icon'
 
 const normPlaca = (v) => String(v.PLACA || '').trim().toUpperCase()
 
@@ -70,8 +71,8 @@ export default function VentaList({ ventas, busqueda, rol, onActualizar }) {
             background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8,
             padding: '10px 12px', marginBottom: 8,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 2 }}>
-              {'⚠ Placas duplicadas — requieren decisión de Legal'}
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="alert-triangle" size={14} />Placas duplicadas — requieren decisión de Legal
             </div>
             <div style={{ fontSize: 11, color: '#991B1B', lineHeight: 1.4 }}>
               {'Hay '}{placasEnConflicto.size}{' placa'}{placasEnConflicto.size > 1 ? 's' : ''}
