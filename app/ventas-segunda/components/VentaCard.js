@@ -11,7 +11,6 @@ import {
   validarAnticipacionCita,
   validarRangoHorario,
   validarReglaDiaAnterior,
-  puedeConfirmarCita,
 } from '../../../lib/ventas-segunda/utils'
 import { getPermisos } from '../../../lib/auth'
 
@@ -117,7 +116,7 @@ function soloDigitos(v) {
 
 // ── Componente principal ─────────────────────────────────────
 
-export default function VentaCard({ venta, rol, onActualizar }) {
+export default function VentaCard({ venta, rol, onActualizar, enConflicto = false }) {
   const estado   = derivarEstadoVS(venta)
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
@@ -204,7 +203,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
     setCargando(true)
     setMsg(null)
     try {
-      const qs  = new URLSearchParams({ row: venta._idx, ...params }).toString()
+      const qs  = new URLSearchParams({ placa: venta.PLACA, ...params }).toString()
       const res = await fetch(`${VS_URL}?${qs}`, { cache: 'no-store' })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Error desconocido')
@@ -231,6 +230,8 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const inscribir           = () => llamarAPI({ action: 'inscribir' })
   const marcarSubsanado     = () => llamarAPI({ action: 'marcar_subsanado' })
   const confirmarSubsanacion = () => llamarAPI({ action: 'confirmar_subsanacion', area: AREA_NOMBRE[rol] || '' })
+  // B.6 — Legal anula un expediente duplicado (desempate por placa + marca temporal)
+  const anularExpediente = () => llamarAPI({ action: 'anular_expediente', row: venta._idx })
 
   const agendarCita = () => {
     if (!validarAnticipacionCita(fechaCita, horaCita)) return
@@ -295,7 +296,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
         headers:  { 'Content-Type': 'text/plain' },
         body:     JSON.stringify({
           action:      'subir_boleta',
-          row:         venta._idx,
           placa:       venta.PLACA,
           fileBase64:  base64,
           mimeType:    file.type,
@@ -328,7 +328,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
         headers: { 'Content-Type': 'text/plain' },
         body:    JSON.stringify({
           action:     'subir_subsanacion',
-          row:        venta._idx,
           placa:      venta.PLACA,
           fileBase64: base64,
           mimeType:   file.type,
@@ -348,7 +347,6 @@ export default function VentaCard({ venta, rol, onActualizar }) {
   const anticipacionValida = validarAnticipacionCita(fechaCita, horaCita)
   const reglaDiaAnterior   = validarReglaDiaAnterior(fechaCita, horaCita)
   const citaValida         = rangoValido && anticipacionValida && reglaDiaAnterior
-  const confirmacionActiva = puedeConfirmarCita(venta.FECHA_CITA, venta.HORA_CITA)
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -491,7 +489,24 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             </div>
           )}
 
-          {/* ── ACCIONES POR ROL ─────────────────────────── */}
+          {/* B.6 — Placa duplicada en conflicto: se bloquean las acciones normales */}
+          {enConflicto ? (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 3 }}>
+                  {'⚠ Placa duplicada — expediente bloqueado'}
+                </div>
+                <div style={{ fontSize: 11, color: '#991B1B', lineHeight: 1.4, marginBottom: rol === 'legal' ? 8 : 0 }}>
+                  {'Hay más de un expediente activo con esta placa. Compara los datos y, si eres Legal, anula el que no corresponda.'}
+                </div>
+                {rol === 'legal' && (
+                  <Btn onClick={anularExpediente} disabled={cargando} color="#DC2626">
+                    {cargando ? 'Anulando…' : '🗑 Anular este expediente'}
+                  </Btn>
+                )}
+              </div>
+            </div>
+          ) : (
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
             {/* COMERCIAL — corrección de datos:
@@ -750,14 +765,9 @@ export default function VentaCard({ venta, rol, onActualizar }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'EN_CITA' && puedeAccion('confirmar_cita') && (
                   <div>
-                    <Btn onClick={confirmarCitaAct} disabled={!confirmacionActiva || cargando} color="#0F766E">
+                    <Btn onClick={confirmarCitaAct} disabled={cargando} color="#0F766E">
                       ✅ Confirmar cita
                     </Btn>
-                    {!confirmacionActiva && (
-                      <p style={{ fontSize: 11, color: '#DC2626', margin: '4px 0 0' }}>
-                        El plazo de confirmación venció. Comercial debe reagendar.
-                      </p>
-                    )}
                   </div>
                 )}            {puedeAccion('reagendar') && (estado === 'EN_CITA' || estado === 'CITA_CONFIRMADA' || estado === 'DOCS_OBSERVADOS') && !reagendarOpen && (
               <Btn onClick={() => setReagendarOpen(true)} color="#D97706" small>Reagendar cita</Btn>
@@ -904,6 +914,7 @@ export default function VentaCard({ venta, rol, onActualizar }) {
             )}
 
           </div>
+          )}
         </div>
       )}
     </div>
