@@ -498,8 +498,8 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
           {enConflicto ? (
             <div style={{ marginTop: 12 }}>
               <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 3 }}>
-                  {'Placa duplicada — expediente bloqueado'}
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="alert-triangle" size={14} />Placa duplicada — expediente bloqueado
                 </div>
                 <div style={{ fontSize: 11, color: '#991B1B', lineHeight: 1.4, marginBottom: rol === 'legal' ? 8 : 0 }}>
                   {'Hay más de un expediente activo con esta placa. Compara los datos y, si eres Legal, anula el que no corresponda.'}
