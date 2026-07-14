@@ -454,14 +454,15 @@ function PipelineArr() {
 // AgendaView
 // ─────────────────────────────────────────────────────────────────
 function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
-  const ventasDia = ventas.filter(v => v.FECHA_CITA === fecha)
+  const ventasDia = ventas.filter(v => v.FECHA_CITA === fecha && derivarEstadoVS(v) !== 'ANULADO')
   const entradas = ventasDia.map(v => ({ venta: v, estado: derivarEstadoVS(v) }))
 
   const mapaHora = {}
   entradas.forEach(e => {
     if (e.venta.HORA_CITA) {
       const h = String(e.venta.HORA_CITA).trim().substring(0, 5)
-      if (!mapaHora[h]) mapaHora[h] = e
+      if (!mapaHora[h]) mapaHora[h] = []
+      mapaHora[h].push(e)
     }
   })
 
@@ -566,25 +567,36 @@ function BloqueTurno({ label, slots, mapaHora }) {
         {label}
       </div>
       {slots.map(slot => {
-        const entry = mapaHora[slot]
+        const entries = mapaHora[slot] || []
+        const ocupado = entries.length > 0
         return (
           <div key={slot} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 6 }}>
             <div style={{
               fontSize: 11, width: 36, flexShrink: 0, paddingTop: 9,
-              color: entry ? '#374151' : '#9CA3AF',
-              fontWeight: entry ? 600 : 400,
+              color: ocupado ? '#374151' : '#9CA3AF',
+              fontWeight: ocupado ? 600 : 400,
             }}>
               {slot}
             </div>
-            {entry
-              ? <SlotOcupado venta={entry.venta} estado={entry.estado} />
-              : (
-                <div style={{ flex: 1, background: '#F9F9F7', border: '0.5px solid #E5E2DB',
-                  borderRadius: 10, padding: '8px 12px' }}>
-                  <span style={{ fontSize: 12, color: '#C4C0B8' }}>Libre</span>
+            {entries.length === 0 ? (
+              <div style={{ flex: 1, background: '#F9F9F7', border: '0.5px solid #E5E2DB',
+                borderRadius: 10, padding: '8px 12px' }}>
+                <span style={{ fontSize: 12, color: '#C4C0B8' }}>Libre</span>
+              </div>
+            ) : entries.length === 1 ? (
+              <SlotOcupado venta={entries[0].venta} estado={entries[0].estado} />
+            ) : (
+              <div style={{ flex: 1, borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', padding: '8px 12px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#DC2626', marginBottom: 4 }}>
+                  {'⚠ ' + entries.length + ' citas en conflicto en este horario'}
                 </div>
-              )
-            }
+                {entries.map((e, i) => (
+                  <div key={i} style={{ fontSize: 12, color: '#374151' }}>
+                    {(e.venta.PLACA || '—') + (e.venta.NOMBRE ? ' · ' + e.venta.NOMBRE : '')}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
       })}
