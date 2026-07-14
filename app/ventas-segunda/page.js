@@ -8,6 +8,7 @@ import { autenticarVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
 import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
+import { hoyISO, mananaISO, ayerISO } from '../../lib/fechas'
 
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
 const NAVY = '#1A2238'
@@ -31,9 +32,9 @@ function formatFechaLocal(d) {
 }
 
 function labelDia(fecha) {
-  const hoy = formatFechaLocal(new Date())
-  const manana = formatFechaLocal(new Date(Date.now() + 86400000))
-  const ayer = formatFechaLocal(new Date(Date.now() - 86400000))
+  const hoy = hoyISO()
+  const manana = mananaISO()
+  const ayer = ayerISO()
   const d = new Date(fecha + 'T12:00:00')
   const semana = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
   const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -57,7 +58,7 @@ export default function VentasSegundaPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState(null)
   const [vista, setVista] = useState('lista')
-  const [fechaAgenda, setFechaAgenda] = useState(formatFechaLocal(new Date()))
+  const [fechaAgenda, setFechaAgenda] = useState(hoyISO())
 
   const cargarVentas = useCallback(async (esInicial = false) => {
     if (!VS_SCRIPT_URL) { setErrorData('Variable NEXT_PUBLIC_VS_SCRIPT_URL no configurada.'); return }
