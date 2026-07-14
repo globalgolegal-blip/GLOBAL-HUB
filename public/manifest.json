@@ -4,7 +4,7 @@
   "description": "Seguimiento de contratos — Go",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0f4f8",
+  "background_color": "#F1EFE8",
   "theme_color": "#1A2238",
   "icons": [
     {
