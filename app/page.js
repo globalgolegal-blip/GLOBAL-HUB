@@ -5,15 +5,16 @@ import ContractList from '../components/ContractList'
 import { parsearSheet } from '../lib/parseSheets'
 import { derivarEstado, estadoParaVista, hoyISO, ESTADO_CONFIG } from '../lib/utils'
 import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../lib/regions'
+import Icon from '../components/Icon'
 const AC_PIN = '159753'
 const LEGAL_PIN = '4815926'
 const CATEGORIAS = [
-{ key: 'PENDIENTE', label: 'Contratos por firmar', color: '#185FA5' },
-{ key: 'INGRESADO', label: 'Contratos emitidos', color: '#534AB7' },
-{ key: 'CONTRATO_OBSERVADO', label: 'Contratos observados', color: '#BA7517' },
-{ key: 'VALIDADO', label: 'Firmas validadas', color: '#0F6E56' },
-{ key: 'OBSERVADO', label: 'Firmas observadas', color: '#D85A30' },
-{ key: 'VENCIDO', label: 'Contratos vencidos', color: '#A32D2D' },
+{ key: 'PENDIENTE', label: 'Contratos por firmar', short: 'Por firmar', color: '#185FA5' },
+{ key: 'INGRESADO', label: 'Contratos emitidos', short: 'Emitidos', color: '#534AB7' },
+{ key: 'CONTRATO_OBSERVADO', label: 'Contratos observados', short: 'Observados', color: '#BA7517' },
+{ key: 'VALIDADO', label: 'Firmas validadas', short: 'Validadas', color: '#0F6E56' },
+{ key: 'OBSERVADO', label: 'Firmas observadas', short: 'Firmas obs.', color: '#D85A30' },
+{ key: 'VENCIDO', label: 'Contratos vencidos', short: 'Vencidos', color: '#A32D2D' },
 ]
 const COL_FECHA = {
   PENDIENTE: 'FECHA DE ENVÍO',
@@ -408,72 +409,38 @@ export default function Dashboard() {
     <div className="min-h-screen" style={{ backgroundColor: '#F1EFE8' }}>
       <header style={{ backgroundColor: '#1A2238' }} className="px-4 pt-6 pb-5">
         <div className="max-w-lg mx-auto">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div>
-              <h1 style={{ fontSize: '18px', fontWeight: '500', color: 'white' }}>GoTrack</h1>
-              <p style={{ fontSize: '12px', color: '#9BB4D8' }}>
-                {`Seguimiento de contratos${horaAct ? ' · ' + horaAct : ''}`}
-              </p>
+              <div style={{ fontSize: '15px', fontWeight: '500', color: 'white', lineHeight: 1.1 }}>GoTrack</div>
+              <div style={{ fontSize: '11px', color: '#9BB4D8' }}>
+                {`Desembolso${horaAct ? ' · ' + horaAct : ''}`}
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Botón AC */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <button
                 onClick={() => { setMostrarPin(v => !v); setPinError(false); setPinInput(''); setMostrarPinLegal(false) }}
-                title={acAutenticado ? 'AC autenticado' : 'Acceso AC'}
-                style={{ color: acAutenticado ? '#4A90D9' : '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}
+                title={acAutenticado ? 'AC autenticado' : 'Acceso AC'} aria-label="Acceso Atención al Cliente"
+                style={{ color: acAutenticado ? '#4A90D9' : '#9BB4D8', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', padding: 0 }}
               >
-                <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {acAutenticado
-                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0v4M5 11h14l1 10H4L5 11z" />
-                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  }
-                </svg>
+                <Icon name="lock" size={19} />
               </button>
-              {/* Botón Legal */}
               <button
                 onClick={() => { setMostrarPinLegal(v => !v); setPinLegalError(false); setPinLegalInput(''); setMostrarPin(false) }}
-                title={legalAutenticado ? 'Modo Legal activo' : 'Acceso Equipo Legal'}
-                style={{ color: legalAutenticado ? '#4DC987' : '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}
+                title={legalAutenticado ? 'Modo Legal activo' : 'Acceso Equipo Legal'} aria-label="Acceso Equipo Legal"
+                style={{ color: legalAutenticado ? '#4DC987' : '#9BB4D8', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', padding: 0 }}
               >
-                <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                </svg>
+                <Icon name="scale" size={19} />
               </button>
-              <button onClick={cargarDatos} style={{ color: '#9BB4D8', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+              <button onClick={cargarDatos} title="Actualizar" aria-label="Actualizar"
+                style={{ color: '#9BB4D8', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', padding: 0 }}>
+                <Icon name="refresh" size={19} />
               </button>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-            <a
-              href="https://gobot-leg.github.io/GOBOT/gobot_faq_74.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                fontSize: '11px', fontWeight: '500', color: '#9BB4D8',
-                textDecoration: 'none', padding: '4px 8px',
-                borderRadius: '6px', border: '0.5px solid #2D3A5A',
-              }}
-            >
-              <svg style={{ width: '13px', height: '13px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {'GoBot · Resuelve tus dudas'}
-            </a>
-            <a
-              href="/ventas-segunda"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                fontSize: '11px', fontWeight: '500', color: '#9BB4D8',
-                textDecoration: 'none', padding: '4px 8px',
-                borderRadius: '6px', border: '0.5px solid #2D3A5A',
-              }}
-            >
-              {'Ventas de Segunda →'}
+          <div style={{ display: 'flex', gap: '18px', marginTop: '12px' }}>
+            <span style={{ color: '#fff', fontSize: '12px', paddingBottom: '6px', borderBottom: '2px solid #fff' }}>Desembolso</span>
+            <a href="/ventas-segunda" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#9BB4D8', fontSize: '12px', textDecoration: 'none', paddingBottom: '6px', borderBottom: '2px solid transparent' }}>
+              Ventas de segunda <Icon name="arrow-right" size={14} />
             </a>
           </div>
           {mostrarPin && !acAutenticado && (
@@ -577,6 +544,15 @@ export default function Dashboard() {
           )}
         </div>
       </header>
+      <div style={{ background: 'white', borderBottom: '0.5px solid #E8E6DF' }}>
+        <div className="max-w-lg mx-auto" style={{ padding: '8px 16px' }}>
+          <a href="https://gobot-leg.github.io/GOBOT/gobot_faq_74.html" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#E6F1FB', color: '#185FA5',
+              border: 'none', borderRadius: '20px', padding: '5px 12px', fontSize: '12px', fontWeight: '500', textDecoration: 'none' }}>
+            <Icon name="robot" size={16} /> GoBot · Guía comercial
+          </a>
+        </div>
+      </div>
       <main className="max-w-lg mx-auto pb-10" style={{ padding: '12px 12px 40px' }}>
         {cargando && (
           <div className="text-center py-16">
@@ -736,6 +712,7 @@ export default function Dashboard() {
                       padding: '12px 14px',
                       textAlign: 'left',
                       border: categoriaActiva === cat.key ? '2px solid #1A2238' : '0.5px solid #D3D1C7',
+                      borderLeft: `4px solid ${cat.color}`,
                       cursor: 'pointer',
                       transition: 'border 0.15s',
                     }}
@@ -743,8 +720,8 @@ export default function Dashboard() {
                     <div style={{ fontSize: '24px', fontWeight: '500', color: '#1A2238', lineHeight: '1' }}>
                       {counts[cat.key] || 0}
                     </div>
-                    <div style={{ marginTop: '4px', fontSize: '10px', fontWeight: '500', color: cat.color, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: '1.3' }}>
-                      {cat.label}
+                    <div style={{ marginTop: '3px', fontSize: '12px', color: cat.color, lineHeight: '1.3' }}>
+                      {cat.short}
                     </div>
                   </button>
                 ))}
