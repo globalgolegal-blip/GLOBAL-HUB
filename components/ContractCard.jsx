@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { ESTADO_CONFIG, extraerIntentos } from '../lib/utils'
+import Icon from './Icon'
 
 function fmt(val) {
   if (!val) return '—'
@@ -245,7 +246,7 @@ export default function ContractCard({
           fontSize: '11px', fontWeight: '600', color: '#A32D2D',
           display: 'flex', alignItems: 'center', gap: '5px',
         }}>
-          {'⚠ Vence el dia de hoy — prioridad'}
+          <Icon name="alert-triangle" size={14} />{'Vence el día de hoy — prioridad'}
         </div>
       )}
 
@@ -303,7 +304,7 @@ export default function ContractCard({
               background: '#FFF8E1', border: '0.5px solid #F5C842',
               fontSize: '10px', fontWeight: '600', color: '#7A5C00',
             }}>
-              {'⚠ Vencido ayer — ventana de validacion activa'}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Icon name="alert-triangle" size={13} />{'Vencido ayer — ventana de validación activa'}</span>
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -436,8 +437,8 @@ export default function ContractCard({
               style={{
                 flex: 1, minWidth: '70px', fontSize: '11px', fontWeight: '600',
                 padding: '7px 10px', borderRadius: '8px',
-                background: enviandoLObs ? '#B4B2A9' : '#BA7517',
-                color: 'white', border: 'none',
+                background: 'white', color: enviandoLObs ? '#B4B2A9' : '#BA7517',
+                border: '0.5px solid #D3D1C7',
                 cursor: enviandoLObs ? 'not-allowed' : 'pointer',
               }}
             >
@@ -449,8 +450,8 @@ export default function ContractCard({
               style={{
                 flex: 1, minWidth: '70px', fontSize: '11px', fontWeight: '600',
                 padding: '7px 10px', borderRadius: '8px',
-                background: enviandoLPend ? '#B4B2A9' : '#8B1A1A',
-                color: 'white', border: 'none',
+                background: 'white', color: enviandoLPend ? '#B4B2A9' : '#8B1A1A',
+                border: '0.5px solid #D3D1C7',
                 cursor: enviandoLPend ? 'not-allowed' : 'pointer',
               }}
             >
@@ -585,8 +586,8 @@ export default function ContractCard({
               style={{
                 flex: 1, fontSize: '11px', fontWeight: '600',
                 padding: '7px 10px', borderRadius: '8px',
-                background: enviandoLObs ? '#B4B2A9' : '#BA7517',
-                color: 'white', border: 'none',
+                background: 'white', color: enviandoLObs ? '#B4B2A9' : '#BA7517',
+                border: '0.5px solid #D3D1C7',
                 cursor: enviandoLObs ? 'not-allowed' : 'pointer',
               }}
             >
@@ -647,8 +648,8 @@ export default function ContractCard({
               onClick={() => { setObsLegalOpen(false); setMotivoObsLegal('') }}
               style={{
                 fontSize: '11px', fontWeight: '600', padding: '7px 10px',
-                borderRadius: '8px', background: '#6B7280',
-                color: 'white', border: 'none', cursor: 'pointer',
+                borderRadius: '8px', background: 'white',
+                color: '#6B7280', border: '0.5px solid #D3D1C7', cursor: 'pointer',
               }}
             >
               Cancelar
