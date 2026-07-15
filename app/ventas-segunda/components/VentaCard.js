@@ -718,7 +718,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     )}
                     {fechaCita && horaCita && rangoValido && anticipacionValida && !reglaDiaAnterior && (
                       <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        Fuera de horario: para citas del proximo dia habil solo se permiten horarios desde las 11:00.
+                        Fuera de horario: para citas del proximo dia habil solo se permiten horarios desde las 10:00.
                       </p>
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
