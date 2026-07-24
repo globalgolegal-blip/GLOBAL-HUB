@@ -162,21 +162,23 @@ export default function VentasSegundaPage() {
       ? _baseCiu(v.CIUDAD) === _baseCiu(usuario.ciudad)
       : true
   const ventasVisibles = ventas.filter(enScopeCiudad)
+  // La ciudad seleccionada acota TAMBIÉN los conteos de arriba (no solo la lista)
+  const ventasCiudad = filtroCiudad
+    ? ventasVisibles.filter(v => _baseCiu(v.CIUDAD) === _baseCiu(filtroCiudad))
+    : ventasVisibles
 
-  const estados = ventasVisibles.map(v => derivarEstadoVS(v))
+  const estados = ventasCiudad.map(v => derivarEstadoVS(v))
   const count = (e) => estados.filter(x => x === e).length
 
   const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
 
   const ventasBase = usuario?.rol
-    ? ventasVisibles.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
-    : ventasVisibles
+    ? ventasCiudad.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
+    : ventasCiudad
 
-  const ventasFiltradas = ventasBase.filter(v => {
-    if (filtroEstado && derivarEstadoVS(v) !== filtroEstado) return false
-    if (filtroCiudad && _baseCiu(v.CIUDAD) !== _baseCiu(filtroCiudad)) return false
-    return true
-  })
+  const ventasFiltradas = filtroEstado
+    ? ventasBase.filter(v => derivarEstadoVS(v) === filtroEstado)
+    : ventasBase
 
   // Ciudades para el filtro + notaría de la ciudad seleccionada
   const ciudadesList = Object.values(ciudadesCfg).map(c => c.ciudad).filter(Boolean).sort()
@@ -363,14 +365,19 @@ export default function VentasSegundaPage() {
           )}
 
           {ciudadSeleccionada && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10,
               background: 'white', border: '0.5px solid #D3D1C7', borderLeft: '4px solid #1A2238',
               borderRadius: 12, padding: '8px 12px' }}>
-              <Icon name="scale" size={16} style={{ color: '#1A2238' }} />
-              <span style={{ fontSize: 13, color: '#1A2238' }}>
-                <span style={{ fontWeight: 500 }}>{cfgSel?.ciudad || ciudadSeleccionada}</span>
-                {cfgSel?.notaria ? ' · Notaría ' + cfgSel.notaria : ''}
-              </span>
+              <Icon name="scale" size={16} style={{ color: '#1A2238', marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 13, color: '#1A2238' }}>
+                  <span style={{ fontWeight: 500 }}>{cfgSel?.ciudad || ciudadSeleccionada}</span>
+                  {cfgSel?.notaria ? ' · Notaría ' + cfgSel.notaria : ''}
+                </div>
+                {cfgSel?.direccion ? (
+                  <div style={{ fontSize: 12, color: '#5F5E5A', marginTop: 1 }}>{cfgSel.direccion}</div>
+                ) : null}
+              </div>
             </div>
           )}
 
