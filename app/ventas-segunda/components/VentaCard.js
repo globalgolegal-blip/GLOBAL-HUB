@@ -126,7 +126,6 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
   const cfgCiudad = ciudadesCfg[String(venta.CIUDAD || '').split(' - ')[0].trim().toUpperCase()] || null
-  const notaCiudad = (cfgCiudad && cfgCiudad.nota) ? cfgCiudad.nota : ''
   const aplicaGMCiudad = cfgCiudad ? !!cfgCiudad.aplicaGM : true
 
   // Estado registral del sheet externo de GM
@@ -405,14 +404,6 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
       {expandido && (
         <div style={{ padding: '0 14px 14px', borderTop: '1px solid #F3F4F6' }}>
 
-          {notaCiudad && (
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6,
-              background: '#FFF7ED', border: '0.5px solid #FED7AA', borderRadius: 8,
-              padding: '7px 10px', fontSize: 12, color: '#92400E' }}>
-              <Icon name="info" size={15} />{notaCiudad}
-            </div>
-          )}
-
           {/* Datos básicos */}
           <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
             <InfoRow label="DNI/CE"   value={venta.DNI   || '(vacío)'} warn={dniInvalido} />
@@ -453,6 +444,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
               <LinkDoc url={venta.FOTO_DNI_ANV}    label="DNI Anverso"     />
               <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
+              <LinkDoc url={venta.TIVE_URL}        label="TIVE"            />
               <LinkDoc url={venta.BOLETA_URL}       label="Boleta VS"        highlight={!!venta.BOLETA_URL} />
               <LinkDoc url={venta.SUBSANACION_URL}  label="Doc subsanado"    />
             </div>
