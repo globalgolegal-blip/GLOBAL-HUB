@@ -25,6 +25,16 @@ for (let m = 555; m <= 750; m += 15) SLOTS_MANANA.push(_slot(m))
 for (let m = 855; m <= 990; m += 15) SLOTS_TARDE.push(_slot(m))
 for (let m = 555; m <= 705; m += 15) SLOTS_SAB.push(_slot(m))
 
+// Genera slots de 15 min a partir de un rango "HH:mm-HH:mm" (tolerante al guion largo)
+const slotsDeRango = (str) => {
+  const m = String(str || '').trim().replace(/[‒–—−]/g, '-').match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/)
+  if (!m) return []
+  const ini = (+m[1]) * 60 + (+m[2]), fin = (+m[3]) * 60 + (+m[4])
+  const out = []
+  for (let x = ini; x <= fin; x += 15) out.push(_slot(x))
+  return out
+}
+
 function formatFechaLocal(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -415,6 +425,7 @@ export default function VentasSegundaPage() {
           fecha={fechaAgenda}
           onMoverDia={moverDia}
           cargando={cargando}
+          cfgCiudad={cfgSel}
         />
 
       )}
@@ -467,9 +478,12 @@ function StageCard({ label, count, color, estado, activo, onToggle }) {
 // ─────────────────────────────────────────────────────────────────
 // AgendaView
 // ─────────────────────────────────────────────────────────────────
-function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
+function AgendaView({ ventas, fecha, onMoverDia, cargando, cfgCiudad }) {
   const ventasDia = ventas.filter(v => v.FECHA_CITA === fecha && derivarEstadoVS(v) !== 'ANULADO')
   const entradas = ventasDia.map(v => ({ venta: v, estado: derivarEstadoVS(v) }))
+  const slotsMan = cfgCiudad ? slotsDeRango(cfgCiudad.horarioManana) : SLOTS_MANANA
+  const slotsTar = cfgCiudad ? slotsDeRango(cfgCiudad.horarioTarde) : SLOTS_TARDE
+  const slotsSab = cfgCiudad ? slotsDeRango(cfgCiudad.horarioSabado) : SLOTS_SAB
 
   const mapaHora = {}
   entradas.forEach(e => {
@@ -529,27 +543,25 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando }) {
           </div>
         ) : (() => {
           const esSabado = new Date(fecha + 'T12:00:00').getDay() === 6
+          const man = esSabado ? slotsSab : slotsMan
+          const tar = esSabado ? [] : slotsTar
           return (
             <>
-              <BloqueTurno
-                label={esSabado ? 'Sábado — 09:15 a 11:45' : 'Turno mañana — 09:15 a 12:30'}
-                slots={esSabado ? SLOTS_SAB : SLOTS_MANANA}
-                mapaHora={mapaHora}
-              />
-              {!esSabado && (
+              {man.length > 0 ? (
+                <BloqueTurno label={esSabado ? 'Sábado' : 'Turno mañana'} slots={man} mapaHora={mapaHora} />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: 13 }}>
+                  Esta ciudad no atiende este día.
+                </div>
+              )}
+              {tar.length > 0 && (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 6px' }}>
                     <div style={{ flex: 1, borderTop: '1px dashed #D1D5DB' }} />
-                    <span style={{ fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap' }}>
-                      Refrigerio 12:30 – 14:15
-                    </span>
+                    <span style={{ fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap' }}>Refrigerio</span>
                     <div style={{ flex: 1, borderTop: '1px dashed #D1D5DB' }} />
                   </div>
-                  <BloqueTurno
-                    label="Turno tarde — 14:15 a 16:30"
-                    slots={SLOTS_TARDE}
-                    mapaHora={mapaHora}
-                  />
+                  <BloqueTurno label="Turno tarde" slots={tar} mapaHora={mapaHora} />
                 </>
               )}
             </>
