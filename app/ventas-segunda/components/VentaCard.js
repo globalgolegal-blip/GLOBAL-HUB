@@ -125,7 +125,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   const estado   = derivarEstadoVS(venta)
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
-  const cfgCiudad = ciudadesCfg[String(venta.CIUDAD || '').trim().toUpperCase()] || null
+  const cfgCiudad = ciudadesCfg[String(venta.CIUDAD || '').split(' - ')[0].trim().toUpperCase()] || null
   const notaCiudad = (cfgCiudad && cfgCiudad.nota) ? cfgCiudad.nota : ''
 
   // Estado registral del sheet externo de GM
