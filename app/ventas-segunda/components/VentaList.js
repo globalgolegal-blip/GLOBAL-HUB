@@ -7,7 +7,7 @@ import Icon from '../../../components/Icon'
 
 const normPlaca = (v) => String(v.PLACA || '').trim().toUpperCase()
 
-export default function VentaList({ ventas, busqueda, rol, onActualizar }) {
+export default function VentaList({ ventas, busqueda, rol, onActualizar, ciudadesCfg = {} }) {
   const query = busqueda.trim().toLowerCase()
 
   // B.6 — Excluir ANULADO de la vista (queda en sheet + historial para auditoría)
@@ -81,13 +81,13 @@ export default function VentaList({ ventas, busqueda, rol, onActualizar }) {
             </div>
           </div>
           {conflictivas.map(v => (
-            <VentaCard key={v._idx} venta={v} rol={rol} onActualizar={onActualizar} enConflicto />
+            <VentaCard key={v._idx} venta={v} rol={rol} onActualizar={onActualizar} ciudadesCfg={ciudadesCfg} enConflicto />
           ))}
         </div>
       )}
 
       {pendientes.map(v => (
-        <VentaCard key={v._idx} venta={v} rol={rol} onActualizar={onActualizar} />
+        <VentaCard key={v._idx} venta={v} rol={rol} onActualizar={onActualizar} ciudadesCfg={ciudadesCfg} />
       ))}
 
       {hayRol && resto.length > 0 && (
@@ -101,7 +101,7 @@ export default function VentaList({ ventas, busqueda, rol, onActualizar }) {
       )}
 
       {resto.map(v => (
-        <VentaCard key={v._idx} venta={v} rol={rol} onActualizar={onActualizar} />
+        <VentaCard key={v._idx} venta={v} rol={rol} onActualizar={onActualizar} ciudadesCfg={ciudadesCfg} />
       ))}
     </div>
   )
