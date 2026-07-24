@@ -4,7 +4,7 @@
 // Tesorería / Notaría / Legal se identifican con PIN para acciones elevadas.
 
 import { useState, useEffect, useCallback } from 'react'
-import { autenticarVS } from '../../lib/auth'
+import { loginVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
 import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
@@ -48,6 +48,7 @@ function labelDia(fecha) {
 
 export default function VentasSegundaPage() {
   const [usuario, setUsuario] = useState(null)
+  const [ciudadesCfg, setCiudadesCfg] = useState({})
   const [mostrarLogin, setLogin] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState('')
@@ -67,9 +68,10 @@ export default function VentasSegundaPage() {
     else setActualizando(true)
     setErrorData(null)
     try {
-      const [resVentas, resGM] = await Promise.all([
+      const [resVentas, resGM, resCiudades] = await Promise.all([
         fetch(VS_SCRIPT_URL, { cache: 'no-store' }),
         fetch(`${VS_SCRIPT_URL}?action=get_gm_table`, { cache: 'no-store' }),
+        fetch(`${VS_SCRIPT_URL}?action=get_ciudades`, { cache: 'no-store' }),
       ])
       if (!resVentas.ok) throw new Error(`Error HTTP ${resVentas.status}`)
       const data = await resVentas.json()
@@ -88,6 +90,17 @@ export default function VentasSegundaPage() {
           }
         }
       } catch (_) { /* Si falla el fetch GM no bloqueamos la carga principal */ }
+
+      try {
+        if (resCiudades.ok) {
+          const cData = await resCiudades.json()
+          if (cData.ok && Array.isArray(cData.ciudades)) {
+            const map = {}
+            cData.ciudades.forEach(c => { map[(c.ciudad || '').trim().toUpperCase()] = c })
+            setCiudadesCfg(map)
+          }
+        }
+      } catch (_) { /* la config de ciudades no bloquea la carga */ }
 
       const ventasBase = parsearVentas(filas)
       const ventasAug = ventasBase.map(v => ({
@@ -112,15 +125,15 @@ export default function VentasSegundaPage() {
     return () => clearInterval(id)
   }, [cargarVentas])
 
-  const verificarPin = () => {
-    const usr = autenticarVS(pinInput)
-    if (usr) {
-      setUsuario(usr)
+  const verificarPin = async () => {
+    const r = await loginVS(pinInput, VS_SCRIPT_URL)
+    if (r && r.ok) {
+      setUsuario({ nombre: r.nombre, rol: r.rol, ciudad: r.ciudad || null })
       setPinError('')
       setPinInput('')
       setLogin(false)
     } else {
-      setPinError('PIN incorrecto.')
+      setPinError((r && r.error) || 'PIN incorrecto.')
       setPinInput('')
     }
   }
@@ -130,14 +143,21 @@ export default function VentasSegundaPage() {
     setLogin(false)
   }
 
-  const estados = ventas.map(v => derivarEstadoVS(v))
+  // Notaría acotada a su ciudad: solo ve expedientes de esa ciudad
+  const enScopeCiudad = (v) =>
+    (usuario?.rol === 'notaria' && usuario?.ciudad)
+      ? String(v.CIUDAD || '').trim().toUpperCase() === String(usuario.ciudad).trim().toUpperCase()
+      : true
+  const ventasVisibles = ventas.filter(enScopeCiudad)
+
+  const estados = ventasVisibles.map(v => derivarEstadoVS(v))
   const count = (e) => estados.filter(x => x === e).length
 
   const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
 
   const ventasBase = usuario?.rol
-    ? ventas.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
-    : ventas
+    ? ventasVisibles.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
+    : ventasVisibles
 
   const ventasFiltradas = filtroEstado
     ? ventasBase.filter(v => derivarEstadoVS(v) === filtroEstado)
@@ -341,6 +361,7 @@ export default function VentasSegundaPage() {
               busqueda={busqueda}
               rol={usuario?.rol ?? null}
               onActualizar={cargarVentas}
+              ciudadesCfg={ciudadesCfg}
             />
           )}
 
@@ -354,7 +375,7 @@ export default function VentasSegundaPage() {
       ) : (
 
         <AgendaView
-          ventas={ventas}
+          ventas={ventasVisibles}
           fecha={fechaAgenda}
           onMoverDia={moverDia}
           cargando={cargando}
