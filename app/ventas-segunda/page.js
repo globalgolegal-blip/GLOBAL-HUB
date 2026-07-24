@@ -59,6 +59,7 @@ export default function VentasSegundaPage() {
   const [ultimaAct, setUltimaAct] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState(null)
+  const [filtroCiudad, setFiltroCiudad] = useState(null)
   const [vista, setVista] = useState('lista')
   const [fechaAgenda, setFechaAgenda] = useState(hoyISO())
 
@@ -143,10 +144,12 @@ export default function VentasSegundaPage() {
     setLogin(false)
   }
 
+  // Ciudad base = parte antes de " - " (por si la opción es "Ciudad - Notaría")
+  const _baseCiu = (s) => String(s || '').split(' - ')[0].trim().toUpperCase()
   // Notaría acotada a su ciudad: solo ve expedientes de esa ciudad
   const enScopeCiudad = (v) =>
     (usuario?.rol === 'notaria' && usuario?.ciudad)
-      ? String(v.CIUDAD || '').trim().toUpperCase() === String(usuario.ciudad).trim().toUpperCase()
+      ? _baseCiu(v.CIUDAD) === _baseCiu(usuario.ciudad)
       : true
   const ventasVisibles = ventas.filter(enScopeCiudad)
 
@@ -159,9 +162,21 @@ export default function VentasSegundaPage() {
     ? ventasVisibles.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
     : ventasVisibles
 
-  const ventasFiltradas = filtroEstado
-    ? ventasBase.filter(v => derivarEstadoVS(v) === filtroEstado)
-    : ventasBase
+  const ventasFiltradas = ventasBase.filter(v => {
+    if (filtroEstado && derivarEstadoVS(v) !== filtroEstado) return false
+    if (filtroCiudad && _baseCiu(v.CIUDAD) !== _baseCiu(filtroCiudad)) return false
+    return true
+  })
+
+  // Ciudades para el filtro + notaría de la ciudad seleccionada
+  const ciudadesList = Object.values(ciudadesCfg).map(c => c.ciudad).filter(Boolean).sort()
+  const ciudadSeleccionada = filtroCiudad || (usuario?.rol === 'notaria' ? usuario?.ciudad : null)
+  const cfgSel = ciudadSeleccionada ? ciudadesCfg[_baseCiu(ciudadSeleccionada)] : null
+  const chipCiudad = (active) => ({
+    fontSize: 12, padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
+    border: active ? '0.5px solid #1A2238' : '0.5px solid #D3D1C7',
+    background: active ? '#1A2238' : 'white', color: active ? 'white' : '#1A2238',
+  })
 
   const stats = {
     ingresados: count('INGRESADO'),
@@ -325,6 +340,27 @@ export default function VentasSegundaPage() {
           {actualizando && (
             <div style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginBottom: 4 }}>
               Actualizando...
+            </div>
+          )}
+
+          {usuario?.rol !== 'notaria' && ciudadesList.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              <button onClick={() => setFiltroCiudad(null)} style={chipCiudad(!filtroCiudad)}>Todas</button>
+              {ciudadesList.map(c => (
+                <button key={c} onClick={() => setFiltroCiudad(prev => prev === c ? null : c)} style={chipCiudad(filtroCiudad === c)}>{c}</button>
+              ))}
+            </div>
+          )}
+
+          {ciudadSeleccionada && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+              background: 'white', border: '0.5px solid #D3D1C7', borderLeft: '4px solid #1A2238',
+              borderRadius: 12, padding: '8px 12px' }}>
+              <Icon name="scale" size={16} style={{ color: '#1A2238' }} />
+              <span style={{ fontSize: 13, color: '#1A2238' }}>
+                <span style={{ fontWeight: 500 }}>{cfgSel?.ciudad || ciudadSeleccionada}</span>
+                {cfgSel?.notaria ? ' · Notaría ' + cfgSel.notaria : ''}
+              </span>
             </div>
           )}
 
