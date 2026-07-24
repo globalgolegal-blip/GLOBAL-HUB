@@ -121,10 +121,12 @@ function soloDigitos(v) {
 
 // ── Componente principal ─────────────────────────────────────
 
-export default function VentaCard({ venta, rol, onActualizar, enConflicto = false }) {
+export default function VentaCard({ venta, rol, onActualizar, enConflicto = false, ciudadesCfg = {} }) {
   const estado   = derivarEstadoVS(venta)
   const cfg      = ESTADO_CONFIG_VS[estado] || ESTADO_CONFIG_VS.INGRESADO
   const permisos = getPermisos(rol)
+  const cfgCiudad = ciudadesCfg[String(venta.CIUDAD || '').trim().toUpperCase()] || null
+  const notaCiudad = (cfgCiudad && cfgCiudad.nota) ? cfgCiudad.nota : ''
 
   // Estado registral del sheet externo de GM
   const gmEstado       = (venta._gmEstado || '').trim().toUpperCase()
@@ -348,10 +350,8 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
     }
   }
 
-  const rangoValido        = validarRangoHorario(horaCita, fechaCita || null)
-  const anticipacionValida = validarAnticipacionCita(fechaCita, horaCita)
-  const reglaDiaAnterior   = validarReglaDiaAnterior(fechaCita, horaCita)
-  const citaValida         = rangoValido && anticipacionValida && reglaDiaAnterior
+  // El backend valida el horario según la ciudad; aquí solo exigimos fecha y hora.
+  const citaValida = !!(fechaCita && horaCita)
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -403,6 +403,14 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
       {/* Cuerpo expandido */}
       {expandido && (
         <div style={{ padding: '0 14px 14px', borderTop: '1px solid #F3F4F6' }}>
+
+          {notaCiudad && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6,
+              background: '#FFF7ED', border: '0.5px solid #FED7AA', borderRadius: 8,
+              padding: '7px 10px', fontSize: 12, color: '#92400E' }}>
+              <Icon name="info" size={15} />{notaCiudad}
+            </div>
+          )}
 
           {/* Datos básicos */}
           <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
@@ -698,7 +706,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0',
                     borderRadius: 8, padding: 10 }}>
                     <p style={{ fontSize: 12, color: '#374151', margin: '0 0 8px', fontWeight: 600 }}>
-                      {estado === 'PENDIENTE_REAGENDA' ? 'Reagendar cita' : 'Agendar cita'} — mínimo 1 hora y 30 minutos de anticipación
+                      {estado === 'PENDIENTE_REAGENDA' ? 'Reagendar cita' : 'Agendar cita'}
                     </p>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       <input type="date" value={fechaCita} onChange={e => setFechaCita(e.target.value)}
@@ -706,21 +714,9 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                       <input type="time" value={horaCita} onChange={e => setHoraCita(e.target.value)}
                         style={inputStyle} />
                     </div>
-                    {fechaCita && horaCita && !rangoValido && (
-                      <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        Horario no permitido. Citas solo de 09:15–12:30 y 14:15–16:30.
-                      </p>
-                    )}
-                    {fechaCita && horaCita && rangoValido && !anticipacionValida && (
-                      <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        La cita debe agendarse con al menos 1 hora y 30 minutos de anticipación.
-                      </p>
-                    )}
-                    {fechaCita && horaCita && rangoValido && anticipacionValida && !reglaDiaAnterior && (
-                      <p style={{ fontSize: 11, color: '#DC2626', margin: '0 0 6px' }}>
-                        Fuera de horario: para citas del proximo dia habil solo se permiten horarios desde las 10:00.
-                      </p>
-                    )}
+                    <p style={{ fontSize: 11, color: '#6B7280', margin: '0 0 6px' }}>
+                      Se validará el horario permitido de {venta.CIUDAD || 'la ciudad'} al confirmar.
+                    </p>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <Btn onClick={agendarCita} disabled={!citaValida || cargando} color="#2563EB" icon="check">
                         Confirmar
@@ -839,10 +835,6 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   <Btn onClick={levantarGM} disabled={cargando} color="#065F46" icon="check">
                     GM Levantada
                   </Btn>
-                )}
-                {/* Inscripción en RRPP — Legal inscribe luego de que Notaría firmó */}
-                {venta.FECHA_FIRMA && !venta.FECHA_INSCRIPCION && puedeAccion('inscribir') && (
-                  <Btn onClick={inscribir} disabled={cargando} color="#1D4ED8" small icon="forms">Inscribir RRPP</Btn>
                 )}
                 {puedeObservar && !obsOpen && (
                   <Btn onClick={() => setObsOpen(true)} color="#9D174D" small outline icon="eye">Observar docs</Btn>
