@@ -127,6 +127,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   const permisos = getPermisos(rol)
   const cfgCiudad = ciudadesCfg[String(venta.CIUDAD || '').split(' - ')[0].trim().toUpperCase()] || null
   const notaCiudad = (cfgCiudad && cfgCiudad.nota) ? cfgCiudad.nota : ''
+  const aplicaGMCiudad = cfgCiudad ? !!cfgCiudad.aplicaGM : true
 
   // Estado registral del sheet externo de GM
   const gmEstado       = (venta._gmEstado || '').trim().toUpperCase()
@@ -777,7 +778,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                 {/* Solicitar GM:
                     · Flujo normal: solo en CITA_CONFIRMADA
                     · EN CALIFICACIÓN: en CITA_CONFIRMADA (coexiste con Firmado) y en FIRMADO */}
-                {puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
+                {aplicaGMCiudad && puedeAccion('solicitar_gm') && !venta.GM_SOLICITADA && (
                   (estado === 'CITA_CONFIRMADA') ||
                   (estado === 'FIRMADO' && enCalificacion)
                 ) && (
@@ -790,8 +791,9 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     · EN CALIFICACIÓN: desde CITA_CONFIRMADA, GM_SOLICITADA o GM_LEVANTADA
                       (coexiste con Solicitar GM en CITA_CONFIRMADA) */}
                 {puedeAccion('firmar') && !venta.FECHA_FIRMA && (
-                  (!enCalificacion && estado === 'GM_LEVANTADA') ||
-                  (enCalificacion && (
+                  (!aplicaGMCiudad && (estado === 'CITA_CONFIRMADA' || estado === 'SIN_CITA')) ||
+                  (aplicaGMCiudad && !enCalificacion && estado === 'GM_LEVANTADA') ||
+                  (aplicaGMCiudad && enCalificacion && (
                     estado === 'CITA_CONFIRMADA' ||
                     estado === 'GM_SOLICITADA'  ||
                     estado === 'GM_LEVANTADA'
@@ -831,7 +833,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {rol === 'legal' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {/* GM pendiente de levantar — Legal responde con este botón */}
-                {venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
+                {aplicaGMCiudad && venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
                   <Btn onClick={levantarGM} disabled={cargando} color="#065F46" icon="check">
                     GM Levantada
                   </Btn>
