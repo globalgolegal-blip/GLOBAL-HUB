@@ -377,6 +377,12 @@ export default function VentasSegundaPage() {
                 {cfgSel?.direccion ? (
                   <div style={{ fontSize: 12, color: '#5F5E5A', marginTop: 1 }}>{cfgSel.direccion}</div>
                 ) : null}
+                  {(cfgSel?.costo || cfgSel?.requisitos) ? (
+                <div style={{ fontSize: 12, color: '#5F5E5A', marginTop: 3, lineHeight: 1.4 }}>
+                  {cfgSel?.costo ? (<><span style={{ fontWeight: 600 }}>Costo Notarial:</span> {cfgSel.costo}. </>) : null}
+                  {cfgSel?.requisitos ? (<><span style={{ fontWeight: 600 }}>Requisitos:</span> {cfgSel.requisitos}</>) : null}
+                </div>
+              ) : null}
               </div>
             </div>
           )}
