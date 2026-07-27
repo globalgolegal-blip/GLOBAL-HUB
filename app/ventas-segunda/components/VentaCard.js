@@ -445,6 +445,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
               <LinkDoc url={venta.FOTO_DNI_REV}    label="DNI Reverso"     />
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
               <LinkDoc url={venta.TIVE_URL}        label="TIVE"            />
+              <LinkDoc url={venta.SOAT_URL}        label="SOAT"            />
               <LinkDoc url={venta.BOLETA_URL}       label="Boleta VS"        highlight={!!venta.BOLETA_URL} />
               <LinkDoc url={venta.SUBSANACION_URL}  label="Doc subsanado"    />
             </div>
