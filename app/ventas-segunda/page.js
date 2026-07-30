@@ -107,7 +107,10 @@ export default function VentasSegundaPage() {
           const cData = await resCiudades.json()
           if (cData.ok && Array.isArray(cData.ciudades)) {
             const map = {}
-            cData.ciudades.forEach(c => { map[(c.ciudad || '').trim().toUpperCase()] = c })
+            cData.ciudades.forEach(c => {
+              const etiqueta = (c.notaria ? c.ciudad + ' - ' + c.notaria : c.ciudad)
+              map[String(etiqueta || '').trim().toUpperCase()] = c
+            })
             setCiudadesCfg(map)
           }
         }
@@ -139,7 +142,7 @@ export default function VentasSegundaPage() {
   const verificarPin = async () => {
     const r = await loginVS(pinInput, VS_SCRIPT_URL)
     if (r && r.ok) {
-      setUsuario({ nombre: r.nombre, rol: r.rol, ciudad: r.ciudad || null })
+      setUsuario({ nombre: r.nombre, rol: r.rol, ciudad: r.ciudad || null, notaria: r.notaria || null, scope: r.scope || r.ciudad || null })
       setPinError('')
       setPinInput('')
       setLogin(false)
@@ -154,17 +157,19 @@ export default function VentasSegundaPage() {
     setLogin(false)
   }
 
-  // Ciudad base = parte antes de " - " (por si la opción es "Ciudad - Notaría")
+  // Ciudad base = parte antes de " - " (solo para mostrar el nombre de la ciudad)
   const _baseCiu = (s) => String(s || '').split(' - ')[0].trim().toUpperCase()
-  // Notaría acotada a su ciudad: solo ve expedientes de esa ciudad
+  // Etiqueta completa "Ciudad - Notaría" = llave de alcance (aísla notarías de una misma ciudad)
+  const _etiqueta = (s) => String(s || '').trim().toUpperCase()
+  // Notaría acotada a SU etiqueta: nunca ve expedientes de otra notaría de la misma ciudad
   const enScopeCiudad = (v) =>
-    (usuario?.rol === 'notaria' && usuario?.ciudad)
-      ? _baseCiu(v.CIUDAD) === _baseCiu(usuario.ciudad)
+    (usuario?.rol === 'notaria' && usuario?.scope)
+      ? _etiqueta(v.CIUDAD) === _etiqueta(usuario.scope)
       : true
   const ventasVisibles = ventas.filter(enScopeCiudad)
-  // La ciudad seleccionada acota TAMBIÉN los conteos de arriba (no solo la lista)
+  // La selección acota TAMBIÉN los conteos de arriba (no solo la lista)
   const ventasCiudad = filtroCiudad
-    ? ventasVisibles.filter(v => _baseCiu(v.CIUDAD) === _baseCiu(filtroCiudad))
+    ? ventasVisibles.filter(v => _etiqueta(v.CIUDAD) === _etiqueta(filtroCiudad))
     : ventasVisibles
 
   const estados = ventasCiudad.map(v => derivarEstadoVS(v))
@@ -181,9 +186,11 @@ export default function VentasSegundaPage() {
     : ventasBase
 
   // Ciudades para el filtro + notaría de la ciudad seleccionada
-  const ciudadesList = Object.values(ciudadesCfg).map(c => c.ciudad).filter(Boolean).sort()
-  const ciudadSeleccionada = filtroCiudad || (usuario?.rol === 'notaria' ? usuario?.ciudad : null)
-  const cfgSel = ciudadSeleccionada ? ciudadesCfg[_baseCiu(ciudadSeleccionada)] : null
+  const ciudadesList = Object.values(ciudadesCfg)
+    .map(c => (c.notaria ? c.ciudad + ' - ' + c.notaria : c.ciudad))
+    .filter(Boolean).sort()
+  const ciudadSeleccionada = filtroCiudad || (usuario?.rol === 'notaria' ? usuario?.scope : null)
+  const cfgSel = ciudadSeleccionada ? ciudadesCfg[_etiqueta(ciudadSeleccionada)] : null
   const chipCiudad = (active) => ({
     fontSize: 12, padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
     border: active ? '0.5px solid #1A2238' : '0.5px solid #D3D1C7',
