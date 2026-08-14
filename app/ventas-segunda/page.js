@@ -2,7 +2,6 @@
 // app/ventas-segunda/page.js
 // Comercial accede SIN PIN — ve cards y puede agendar citas.
 // Tesorería / Notaría / Legal se identifican con PIN para acciones elevadas.
-
 import { useState, useEffect, useCallback } from 'react'
 import { loginVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
@@ -10,10 +9,8 @@ import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../
 import VentaList from './components/VentaList'
 import Icon from '../../components/Icon'
 import { hoyISO, mananaISO, ayerISO } from '../../lib/fechas'
-
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
 const NAVY = '#1A2238'
-
 // Slots de agenda: cada 15 min dentro de los rangos permitidos
 // Lun–Vie: mañana 09:15–12:30 · tarde 14:15–16:30
 // Sábado : mañana 09:15–11:45 (un solo bloque)
@@ -24,7 +21,6 @@ const _slot = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m 
 for (let m = 555; m <= 750; m += 15) SLOTS_MANANA.push(_slot(m))
 for (let m = 855; m <= 990; m += 15) SLOTS_TARDE.push(_slot(m))
 for (let m = 555; m <= 705; m += 15) SLOTS_SAB.push(_slot(m))
-
 // Genera slots de 15 min a partir de un rango "HH:mm-HH:mm" (tolerante al guion largo)
 const slotsDeRango = (str) => {
   const m = String(str || '').trim().replace(/[‒–—−]/g, '-').match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/)
@@ -34,14 +30,12 @@ const slotsDeRango = (str) => {
   for (let x = ini; x <= fin; x += 15) out.push(_slot(x))
   return out
 }
-
 function formatFechaLocal(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${dd}`
 }
-
 function labelDia(fecha) {
   const hoy = hoyISO()
   const manana = mananaISO()
@@ -55,7 +49,6 @@ function labelDia(fecha) {
   if (fecha === ayer) return `Ayer — ${base}`
   return base
 }
-
 export default function VentasSegundaPage() {
   const [usuario, setUsuario] = useState(null)
   const [ciudadesCfg, setCiudadesCfg] = useState({})
@@ -72,7 +65,6 @@ export default function VentasSegundaPage() {
   const [filtroCiudad, setFiltroCiudad] = useState(null)
   const [vista, setVista] = useState('lista')
   const [fechaAgenda, setFechaAgenda] = useState(hoyISO())
-
   const cargarVentas = useCallback(async (esInicial = false) => {
     if (!VS_SCRIPT_URL) { setErrorData('Variable NEXT_PUBLIC_VS_SCRIPT_URL no configurada.'); return }
     if (esInicial) setCargando(true)
@@ -88,7 +80,6 @@ export default function VentasSegundaPage() {
       const data = await resVentas.json()
       if (data && data.ok === false) throw new Error(data.error || 'Error en el servidor')
       const filas = Array.isArray(data) ? data : (data.filas || [])
-
       const gmMap = new Map()
       try {
         if (resGM.ok) {
@@ -101,7 +92,6 @@ export default function VentasSegundaPage() {
           }
         }
       } catch (_) { /* Si falla el fetch GM no bloqueamos la carga principal */ }
-
       try {
         if (resCiudades.ok) {
           const cData = await resCiudades.json()
@@ -115,13 +105,11 @@ export default function VentasSegundaPage() {
           }
         }
       } catch (_) { /* la config de ciudades no bloquea la carga */ }
-
       const ventasBase = parsearVentas(filas)
       const ventasAug = ventasBase.map(v => ({
         ...v,
         _gmEstado: gmMap.get((v.PLACA || '').replace(/[-\s]/g, '').toUpperCase()) ?? null,
       }))
-
       setVentas(ventasAug)
       setUltimaAct(new Date())
     } catch (e) {
@@ -131,14 +119,11 @@ export default function VentasSegundaPage() {
       setActualizando(false)
     }
   }, [])
-
   useEffect(() => { cargarVentas(true) }, [cargarVentas])
-
   useEffect(() => {
     const id = setInterval(() => cargarVentas(false), 90_000)
     return () => clearInterval(id)
   }, [cargarVentas])
-
   const verificarPin = async () => {
     const r = await loginVS(pinInput, VS_SCRIPT_URL)
     if (r && r.ok) {
@@ -151,12 +136,10 @@ export default function VentasSegundaPage() {
       setPinInput('')
     }
   }
-
   const cerrarSesion = () => {
     setUsuario(null)
     setLogin(false)
   }
-
   // Ciudad base = parte antes de " - " (solo para mostrar el nombre de la ciudad)
   const _baseCiu = (s) => String(s || '').split(' - ')[0].trim().toUpperCase()
   // Etiqueta completa "Ciudad - Notaría" = llave de alcance (aísla notarías de una misma ciudad)
@@ -171,20 +154,15 @@ export default function VentasSegundaPage() {
   const ventasCiudad = filtroCiudad
     ? ventasVisibles.filter(v => _etiqueta(v.CIUDAD) === _etiqueta(filtroCiudad))
     : ventasVisibles
-
   const estados = ventasCiudad.map(v => derivarEstadoVS(v))
   const count = (e) => estados.filter(x => x === e).length
-
   const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
-
   const ventasBase = usuario?.rol
     ? ventasCiudad.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
     : ventasCiudad
-
   const ventasFiltradas = filtroEstado
     ? ventasBase.filter(v => derivarEstadoVS(v) === filtroEstado)
     : ventasBase
-
   // Ciudades para el filtro + notaría de la ciudad seleccionada
   const ciudadesList = Object.values(ciudadesCfg)
     .map(c => (c.notaria ? c.ciudad + ' - ' + c.notaria : c.ciudad))
@@ -196,7 +174,6 @@ export default function VentasSegundaPage() {
     border: active ? '0.5px solid #1A2238' : '0.5px solid #D3D1C7',
     background: active ? '#1A2238' : 'white', color: active ? 'white' : '#1A2238',
   })
-
   const stats = {
     ingresados: count('INGRESADO'),
     confirmados: count('CONFIRMADO'),
@@ -209,20 +186,16 @@ export default function VentasSegundaPage() {
     gmLevantada: count('GM_LEVANTADA'),
     firmados: count('FIRMADO'),
   }
-
   const moverDia = (delta) => {
     const d = new Date(fechaAgenda + 'T12:00:00')
     d.setDate(d.getDate() + delta)
     setFechaAgenda(formatFechaLocal(d))
   }
-
   return (
     <div style={{ background: '#F1EFE8', minHeight: '100vh' }}>
-
       {/* HEADER */}
       <header style={{ backgroundColor: NAVY, position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 512, margin: '0 auto', padding: '10px 16px 0' }}>
-
           {/* Fila 1: marca + acciones */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 8 }}>
             <div>
@@ -247,7 +220,6 @@ export default function VentasSegundaPage() {
               )}
             </div>
           </div>
-
           {/* Fila 2: vista Lista/Agenda + volver a Desembolso */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8 }}>
             <div style={{ display: 'flex', gap: 18 }}>
@@ -265,7 +237,6 @@ export default function VentasSegundaPage() {
               <Icon name="arrow-left" size={14} /> Desembolso
             </a>
           </div>
-
           {/* Panel de login inline (desplegable) */}
           {mostrarLogin && !usuario && (
             <div style={{ background: '#243150', borderRadius: 8, padding: '12px 14px',
@@ -298,9 +269,7 @@ export default function VentasSegundaPage() {
               )}
             </div>
           )}
-
         </div>
-
         {/* Franja de utilidades */}
         <div style={{ background: 'white', borderTop: '0.5px solid #E8E6DF' }}>
           <div style={{ maxWidth: 512, margin: '0 auto', padding: '8px 16px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -317,12 +286,9 @@ export default function VentasSegundaPage() {
           </div>
         </div>
       </header>
-
       {/* CONTENIDO — condicional por vista */}
       {vista === 'lista' ? (
-
         <main style={{ maxWidth: 512, margin: '0 auto', padding: '16px 12px 40px' }}>
-
           {filtroEstado && (
             <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6, textAlign: 'right' }}>
               Filtrando por estado —{' '}
@@ -333,7 +299,6 @@ export default function VentasSegundaPage() {
               </button>
             </div>
           )}
-
           {/* Urgentes */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <UrgentCard label="Docs observados" count={stats.docsObservados} color="#E24B4A"
@@ -345,7 +310,6 @@ export default function VentasSegundaPage() {
                 estado="DOCS_SUBSANADOS" activo={filtroEstado} onToggle={toggleFiltro} />
             )}
           </div>
-
           {/* Flujo en grilla */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
             <StageCard label="Ingresados" count={stats.ingresados} color="#378ADD" estado="INGRESADO" activo={filtroEstado} onToggle={toggleFiltro} />
@@ -355,13 +319,11 @@ export default function VentasSegundaPage() {
             <StageCard label="GM levant." count={stats.gmLevantada} color="#0F6E56" estado="GM_LEVANTADA" activo={filtroEstado} onToggle={toggleFiltro} />
             <StageCard label="Firmados" count={stats.firmados} color="#639922" estado="FIRMADO" activo={filtroEstado} onToggle={toggleFiltro} />
           </div>
-
           {actualizando && (
             <div style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginBottom: 4 }}>
               Actualizando...
             </div>
           )}
-
           {usuario?.rol !== 'notaria' && ciudadesList.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
               <button onClick={() => setFiltroCiudad(null)} style={chipCiudad(!filtroCiudad)}>Todas</button>
@@ -370,7 +332,6 @@ export default function VentasSegundaPage() {
               ))}
             </div>
           )}
-
           {ciudadSeleccionada && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10,
               background: 'white', border: '0.5px solid #D3D1C7', borderLeft: '4px solid #1A2238',
@@ -384,6 +345,17 @@ export default function VentasSegundaPage() {
                 {cfgSel?.direccion ? (
                   <div style={{ fontSize: 12, color: '#5F5E5A', marginTop: 1 }}>{cfgSel.direccion}</div>
                 ) : null}
+                {(cfgSel?.horarioManana || cfgSel?.horarioTarde || cfgSel?.horarioSabado) ? (
+                  <div style={{ fontSize: 12, color: '#5F5E5A', marginTop: 2 }}>
+                    <span style={{ fontWeight: 600 }}>Horarios:</span>{' '}
+                    {[
+                      (cfgSel?.horarioManana || cfgSel?.horarioTarde)
+                        ? 'Lun–Vie ' + [cfgSel?.horarioManana, cfgSel?.horarioTarde].filter(Boolean).join(' y ')
+                        : null,
+                      cfgSel?.horarioSabado ? 'Sáb ' + cfgSel.horarioSabado : null,
+                    ].filter(Boolean).join(' · ')}
+                  </div>
+                ) : null}
                   {(cfgSel?.costo || cfgSel?.requisitos) ? (
                 <div style={{ fontSize: 12, color: '#5F5E5A', marginTop: 3, lineHeight: 1.4 }}>
                   {cfgSel?.costo ? (<><span style={{ fontWeight: 600 }}>Costo Notarial:</span> {cfgSel.costo}. </>) : null}
@@ -393,7 +365,6 @@ export default function VentasSegundaPage() {
               </div>
             </div>
           )}
-
           <div style={{ marginBottom: 12, position: 'relative' }}>
             <input type="search" value={busqueda} aria-label="Buscar ventas"
               onChange={e => setBusqueda(e.target.value)}
@@ -404,7 +375,6 @@ export default function VentasSegundaPage() {
             <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
               color: '#9CA3AF', pointerEvents: 'none', display: 'inline-flex' }}><Icon name="search" size={16} /></span>
           </div>
-
           {cargando && (
             <div style={{ textAlign: 'center', padding: '20px 0', color: '#6B7280', fontSize: 13 }}>
               Cargando ventas...
@@ -420,7 +390,6 @@ export default function VentasSegundaPage() {
               </button>
             </div>
           )}
-
           {!cargando && !errorData && (
             <VentaList
               ventas={ventasFiltradas}
@@ -430,16 +399,13 @@ export default function VentasSegundaPage() {
               ciudadesCfg={ciudadesCfg}
             />
           )}
-
           {ultimaAct && !cargando && (
             <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
               Actualizado: {ultimaAct.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
             </p>
           )}
         </main>
-
       ) : (
-
         <AgendaView
           ventas={ventasVisibles}
           fecha={fechaAgenda}
@@ -447,9 +413,7 @@ export default function VentasSegundaPage() {
           cargando={cargando}
           cfgCiudad={cfgSel}
         />
-
       )}
-
       {/* FOOTER */}
       <footer style={{ textAlign: 'center', padding: '20px 16px 32px' }}>
         <p style={{ fontSize: 11, color: '#9CA3AF', margin: 0 }}>
@@ -462,7 +426,6 @@ export default function VentasSegundaPage() {
     </div>
   )
 }
-
 // ─────────────────────────────────────────────────────────────────
 // UrgentCard + StageCard (estados)
 // ─────────────────────────────────────────────────────────────────
@@ -494,7 +457,6 @@ function StageCard({ label, count, color, estado, activo, onToggle }) {
     </div>
   )
 }
-
 // ─────────────────────────────────────────────────────────────────
 // AgendaView
 // ─────────────────────────────────────────────────────────────────
@@ -504,7 +466,6 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando, cfgCiudad }) {
   const slotsMan = cfgCiudad ? slotsDeRango(cfgCiudad.horarioManana) : SLOTS_MANANA
   const slotsTar = cfgCiudad ? slotsDeRango(cfgCiudad.horarioTarde) : SLOTS_TARDE
   const slotsSab = cfgCiudad ? slotsDeRango(cfgCiudad.horarioSabado) : SLOTS_SAB
-
   const mapaHora = {}
   entradas.forEach(e => {
     if (e.venta.HORA_CITA) {
@@ -513,15 +474,12 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando, cfgCiudad }) {
       mapaHora[h].push(e)
     }
   })
-
   const agendadas = entradas.filter(e => e.estado === 'EN_CITA').length
   const citaOk = entradas.filter(e => e.estado === 'CITA_CONFIRMADA').length
   const reagendar = entradas.filter(e => e.estado === 'PENDIENTE_REAGENDA').length
   const total = entradas.length
-
   return (
     <div style={{ maxWidth: 512, margin: '0 auto' }}>
-
       <div style={{
         background: NAVY, borderTop: '0.5px solid rgba(255,255,255,0.1)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -546,7 +504,6 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando, cfgCiudad }) {
           <Icon name="arrow-right" size={18} />
         </button>
       </div>
-
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
         padding: '12px 14px', background: '#F1EFE8',
@@ -555,7 +512,6 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando, cfgCiudad }) {
         <StatDia valor={citaOk} label="Cita OK" color="#3730A3" />
         <StatDia valor={reagendar} label="Reagendar" color="#B45309" />
       </div>
-
       <div style={{ background: '#F1EFE8', padding: '0 14px 40px' }}>
         {cargando ? (
           <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: 13 }}>
@@ -591,7 +547,6 @@ function AgendaView({ ventas, fecha, onMoverDia, cargando, cfgCiudad }) {
     </div>
   )
 }
-
 function StatDia({ valor, label, color }) {
   return (
     <div style={{ background: 'white', borderRadius: 10, border: '0.5px solid #D9D4C8',
@@ -604,7 +559,6 @@ function StatDia({ valor, label, color }) {
     </div>
   )
 }
-
 function BloqueTurno({ label, slots, mapaHora }) {
   return (
     <>
@@ -649,7 +603,6 @@ function BloqueTurno({ label, slots, mapaHora }) {
     </>
   )
 }
-
 function SlotOcupado({ venta, estado }) {
   const cfg = ESTADO_CONFIG_VS[estado] || {}
   return (
