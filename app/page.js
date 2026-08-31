@@ -442,6 +442,10 @@ export default function Dashboard() {
             <a href="/ventas-segunda" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#9BB4D8', fontSize: '12px', textDecoration: 'none', paddingBottom: '6px', borderBottom: '2px solid transparent' }}>
               Ventas de segunda <Icon name="arrow-right" size={14} />
             </a>
+                <a href="https://globalgo-levantamiento-gm.vercel.app/?v=final"
+  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#9BB4D8', fontSize: '12px', textDecoration: 'none', paddingBottom: '6px', borderBottom: '2px solid transparent' }}>
+  Levantamiento <Icon name="arrow-right" size={14} />
+</a>
           </div>
           {mostrarPin && !acAutenticado && (
             <div style={{ marginTop: '12px', background: '#243050', borderRadius: '10px', padding: '12px 14px' }}>
