@@ -99,30 +99,40 @@ export default function Dashboard() {
   const cargarDatos = useCallback(async () => {
     setCargando(true)
     setError(null)
-    try {
-      const res = await fetch(`${SHEET_URL}?_t=${Date.now()}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const filas = await res.json()
-      if (filas.error) throw new Error(filas.error)
-      const { meta: metaParsed, contratos: contratosParsed } = parsearSheet(filas)
-      const contratosConEstado = contratosParsed.map(c => {
-        const est = derivarEstado(c)
-        return {
-          ...c,
-          _estado: est,
-          _estadoVista: estadoParaVista(est, c), // estado público (sin PIN Legal)
-          _region: c['REGION'] || getRegionDeCiudad(c['CIUDAD']),
-          _depto: c['DEPARTAMENTO'] || getDeptoDeciudad(c['CIUDAD']),
+    const esperas = [500, 1500, 3000] // 3 reintentos ante 404/5xx por arranque en frío: 0.5s, 1.5s, 3s
+    let ultimoError
+    for (let intento = 0; intento <= esperas.length; intento++) {
+      try {
+        const res = await fetch(`${SHEET_URL}?_t=${Date.now()}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const filas = await res.json()
+        if (filas.error) throw new Error(filas.error)
+        const { meta: metaParsed, contratos: contratosParsed } = parsearSheet(filas)
+        const contratosConEstado = contratosParsed.map(c => {
+          const est = derivarEstado(c)
+          return {
+            ...c,
+            _estado: est,
+            _estadoVista: estadoParaVista(est, c), // estado público (sin PIN Legal)
+            _region: c['REGION'] || getRegionDeCiudad(c['CIUDAD']),
+            _depto: c['DEPARTAMENTO'] || getDeptoDeciudad(c['CIUDAD']),
+          }
+        })
+        setMeta(metaParsed)
+        setContratos(contratosConEstado)
+        setUltimaAct(new Date())
+        setCargando(false)
+        return // ✅ cargó bien: salimos del bucle
+      } catch (err) {
+        ultimoError = err
+        if (intento < esperas.length) {
+          await new Promise(r => setTimeout(r, esperas[intento]))
         }
-      })
-      setMeta(metaParsed)
-      setContratos(contratosConEstado)
-      setUltimaAct(new Date())
-      setCargando(false)
-    } catch (err) {
-      setError('Error al cargar: ' + err.message)
-      setCargando(false)
+      }
     }
+    // Solo si agotó todos los reintentos mostramos el error al usuario
+    setError('Error al cargar: ' + ultimoError.message)
+    setCargando(false)
   }, [])
   useEffect(() => { cargarDatos() }, [cargarDatos])
   const solicitarValidacion = useCallback(async (id) => {
@@ -155,7 +165,6 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexion: ' + err.message)
     }
   }, [cargarDatos])
-
   const solicitarReenvioVencido = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -171,7 +180,6 @@ export default function Dashboard() {
       setErrorSolicitud('Error de conexion: ' + err.message)
     }
   }, [cargarDatos])
-
   const legalValidar = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -181,7 +189,6 @@ export default function Dashboard() {
       await cargarDatos()
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
-
   const legalObservar = useCallback(async (id, motivo) => {
     setErrorSolicitud(null)
     try {
@@ -192,7 +199,6 @@ export default function Dashboard() {
       await cargarDatos()
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
-
   const legalCompletarJotform = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -202,7 +208,6 @@ export default function Dashboard() {
       await cargarDatos()
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
-
   const legalMarcarPendiente = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -212,7 +217,6 @@ export default function Dashboard() {
       await cargarDatos()
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
-
   const legalConfirmarReenvio = useCallback(async (id) => {
     setErrorSolicitud(null)
     try {
@@ -222,7 +226,6 @@ export default function Dashboard() {
       await cargarDatos()
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
-
   const legalReenviarVencido = useCallback(async (id, nuevaFecha) => {
     setErrorSolicitud(null)
     try {
@@ -233,7 +236,6 @@ export default function Dashboard() {
       await cargarDatos()
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
-
   function verificarPin() {
     if (pinInput === AC_PIN) {
       setAcAutenticado(true)
@@ -375,9 +377,7 @@ export default function Dashboard() {
     if (est === 'OBSERVADO_SISTEMA') return true  // Legal debe revisar observación
     return false
   })
-
   const ciudadesRegionLegal = regionLegal ? ciudadesDeRegion(regionLegal) : []
-
   const contratosLegalFiltrados = contratosLegal.filter(c => {
     if (ciudadLegal) {
       if ((c['CIUDAD'] || '').toUpperCase() !== ciudadLegal.toUpperCase()) return false
@@ -492,7 +492,6 @@ export default function Dashboard() {
               </button>
             </div>
           )}
-
           {mostrarPinLegal && !legalAutenticado && (
             <div style={{ marginTop: '12px', background: '#0F2D1E', borderRadius: '10px', padding: '12px 14px', border: '0.5px solid #1A6B47' }}>
               <p style={{ fontSize: '11px', color: '#4DC987', marginBottom: '8px', fontWeight: '500' }}>
@@ -578,7 +577,6 @@ export default function Dashboard() {
         )}
         {!cargando && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
             {/* ── MODO LEGAL ── */}
             {legalAutenticado && (
               <>
@@ -590,7 +588,6 @@ export default function Dashboard() {
                     {`${contratosLegal.length} contrato${contratosLegal.length !== 1 ? 's' : ''} requieren atencion legal`}
                   </p>
                 </div>
-
                 <div style={{ position: 'relative' }}>
                   <svg
                     style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#888780', pointerEvents: 'none' }}
@@ -619,7 +616,6 @@ export default function Dashboard() {
                     </button>
                   )}
                 </div>
-
                 <div style={{ background: 'white', borderRadius: '12px', padding: '10px 14px', border: '0.5px solid #D3D1C7' }}>
                   <p style={{ fontSize: '10px', fontWeight: '600', color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>
                     {'Región / Ciudad'}
@@ -664,7 +660,6 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-
                 {contratosLegal.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 16px', background: 'white', borderRadius: '12px', border: '0.5px solid #D3D1C7' }}>
                     <p style={{ fontSize: '14px', color: '#888780' }}>{'Sin contratos pendientes de accion legal'}</p>
@@ -698,7 +693,6 @@ export default function Dashboard() {
                 )}
               </>
             )}
-
             {/* ── VISTA NORMAL ── */}
             {!legalAutenticado && (<>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -859,7 +853,6 @@ export default function Dashboard() {
                 onLegalReenviarVencido={legalReenviarVencido}
               />
             </>)}
-
             {/* ── FOOTER ── */}
             <div style={{ textAlign: 'center', padding: '32px 16px 8px', borderTop: '0.5px solid #D3D1C7', marginTop: '8px' }}>
               <p style={{ fontSize: '10px', fontWeight: '600', color: '#1A2238', letterSpacing: '0.12em', marginBottom: '4px' }}>
@@ -871,7 +864,6 @@ export default function Dashboard() {
               <p style={{ fontSize: '10px', color: '#888780', letterSpacing: '0.06em', marginBottom: '16px' }}>
                 GO EQUIPO LEGAL IMAYNA RUWASQAN
               </p>
-
               <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '14px', marginBottom: '14px', textAlign: 'left' }}>
                 <p style={{ fontSize: '9px', fontWeight: '600', color: '#5F5E5A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
                   {'Bancos de Datos Personales · ANPD · Ley 29733'}
@@ -895,13 +887,11 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-
               <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px', marginBottom: '14px', textAlign: 'left' }}>
                 <p style={{ fontSize: '9px', color: '#B4B2A9', lineHeight: '1.6' }}>
                   {'La información contenida en esta plataforma es de carácter confidencial y de uso exclusivo del personal autorizado de Global Go S.A.C. y de la Cooperativa de Ahorro y Crédito Promotora de Negocios y Servicios. Su acceso, reproducción o divulgación no autorizada está prohibida.'}
                 </p>
               </div>
-
               <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
                 <p style={{ fontSize: '9px', color: '#B4B2A9', letterSpacing: '0.04em', marginBottom: '2px' }}>
                   {`© ${new Date().getFullYear()} Global Go S.A.C. · Todos los derechos reservados`}
@@ -917,7 +907,6 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-
           </div>
         )}
       </main>
