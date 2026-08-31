@@ -8,7 +8,7 @@ import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
 import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
 import Icon from '../../components/Icon'
-import { hoyISO, mananaISO, ayerISO } from '../../lib/fechas'
+import { hoyISO, mananaISO, ayerISO } from '../../lib/common/fechas'
 const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
 const NAVY = '#1A2238'
 // Slots de agenda: cada 15 min dentro de los rangos permitidos
