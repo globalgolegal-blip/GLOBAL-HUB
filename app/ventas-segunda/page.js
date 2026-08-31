@@ -220,21 +220,29 @@ export default function VentasSegundaPage() {
               )}
             </div>
           </div>
-          {/* Fila 2: vista Lista/Agenda + volver a Desembolso */}
+          {/* Fila 2: vista Lista/Agenda + volver a Desembolso / Levantamiento */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8 }}>
-  <div style={{ display: 'flex', gap: 18 }}>
-    {['lista', 'agenda'].map(v => (
-      <button key={v} onClick={() => setVista(v)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 6px',
-          fontSize: 12, color: vista === v ? '#fff' : '#9BB4D8',
-          borderBottom: vista === v ? '2px solid #fff' : '2px solid transparent' }}>
-        {v === 'lista' ? 'Lista' : 'Agenda'}
-      </button>
-    ))}
-  </div>
-  <div style={{ display: 'flex', gap: 8 }}>
-    <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500,
-      color: '#9BB4D8', textDecoration: 'none', padding: '4px
+            <div style={{ display: 'flex', gap: 18 }}>
+              {['lista', 'agenda'].map(v => (
+                <button key={v} onClick={() => setVista(v)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 6px',
+                    fontSize: 12, color: vista === v ? '#fff' : '#9BB4D8',
+                    borderBottom: vista === v ? '2px solid #fff' : '2px solid transparent' }}>
+                  {v === 'lista' ? 'Lista' : 'Agenda'}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500,
+                color: '#9BB4D8', textDecoration: 'none', padding: '4px 10px', borderRadius: 8, border: '0.5px solid #2D3A5A' }}>
+                <Icon name="arrow-left" size={14} /> Desembolso
+              </a>
+              <a href="https://globalgo-levantamiento-gm.vercel.app/?v=final" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500,
+                color: '#9BB4D8', textDecoration: 'none', padding: '4px 10px', borderRadius: 8, border: '0.5px solid #2D3A5A' }}>
+                Levantamiento <Icon name="arrow-right" size={14} />
+              </a>
+            </div>
+          </div>
           {/* Panel de login inline (desplegable) */}
           {mostrarLogin && !usuario && (
             <div style={{ background: '#243150', borderRadius: 8, padding: '12px 14px',
