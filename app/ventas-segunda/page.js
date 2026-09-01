@@ -49,6 +49,22 @@ function labelDia(fecha) {
   if (fecha === ayer) return `Ayer — ${base}`
   return base
 }
+// Fecha de ingreso (Marca temporal, col A) normalizada a yyyy-MM-dd en hora de Lima.
+// El backend suele serializar la marca como ISO UTC; también toleramos dd/mm/yyyy.
+function ingresoISO(v) {
+  const s = String(v.MARCA_TEMPORAL || '').trim()
+  if (!s) return ''
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s)
+    return isNaN(d) ? s.slice(0, 10)
+      : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d)
+  }
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+  const d = new Date(s)
+  return isNaN(d) ? '' : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d)
+}
+
 export default function VentasSegundaPage() {
   const [usuario, setUsuario] = useState(null)
   const [ciudadesCfg, setCiudadesCfg] = useState({})
@@ -63,6 +79,8 @@ export default function VentasSegundaPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState(null)
   const [filtroCiudad, setFiltroCiudad] = useState(null)
+  const [ingresoDesde, setIngresoDesde] = useState('')
+  const [ingresoHasta, setIngresoHasta] = useState('')
   const [vista, setVista] = useState('lista')
   const [fechaAgenda, setFechaAgenda] = useState(hoyISO())
   const cargarVentas = useCallback(async (esInicial = false) => {
@@ -154,12 +172,23 @@ export default function VentasSegundaPage() {
   const ventasCiudad = filtroCiudad
     ? ventasVisibles.filter(v => _etiqueta(v.CIUDAD) === _etiqueta(filtroCiudad))
     : ventasVisibles
-  const estados = ventasCiudad.map(v => derivarEstadoVS(v))
+  // Filtro por FECHA DE INGRESO (Marca temporal, col A). Acota conteos y lista.
+  const rangoActivo = !!(ingresoDesde || ingresoHasta)
+  const ventasRango = rangoActivo
+    ? ventasCiudad.filter(v => {
+        const d = ingresoISO(v)
+        if (!d) return false
+        if (ingresoDesde && d < ingresoDesde) return false
+        if (ingresoHasta && d > ingresoHasta) return false
+        return true
+      })
+    : ventasCiudad
+  const estados = ventasRango.map(v => derivarEstadoVS(v))
   const count = (e) => estados.filter(x => x === e).length
   const toggleFiltro = (estado) => setFiltroEstado(prev => prev === estado ? null : estado)
   const ventasBase = usuario?.rol
-    ? ventasCiudad.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
-    : ventasCiudad
+    ? ventasRango.map(v => ({ ...v, _pendiente: tienePendienteParaRol(v, usuario.rol) }))
+    : ventasRango
   const ventasFiltradas = filtroEstado
     ? ventasBase.filter(v => derivarEstadoVS(v) === filtroEstado)
     : ventasBase
@@ -371,6 +400,26 @@ export default function VentasSegundaPage() {
               </div>
             </div>
           )}
+          <div style={{ marginBottom: 10, background: 'white', border: '0.5px solid #D3D1C7', borderRadius: 12, padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#5F5E5A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fecha de ingreso</span>
+              {rangoActivo && (
+                <button onClick={() => { setIngresoDesde(''); setIngresoHasta('') }}
+                  style={{ background: 'none', border: 'none', color: '#2563EB', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: 0 }}>
+                  Limpiar
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="date" value={ingresoDesde} max={ingresoHasta || hoyISO()}
+                onChange={e => setIngresoDesde(e.target.value)} aria-label="Ingreso desde"
+                style={{ flex: 1, fontSize: 12, border: '0.5px solid #D3D1C7', borderRadius: 8, padding: '6px 8px', outline: 'none', color: '#444441' }} />
+              <span style={{ color: '#888780', fontSize: 12 }}>&#x2013;</span>
+              <input type="date" value={ingresoHasta} min={ingresoDesde} max={hoyISO()}
+                onChange={e => setIngresoHasta(e.target.value)} aria-label="Ingreso hasta"
+                style={{ flex: 1, fontSize: 12, border: '0.5px solid #D3D1C7', borderRadius: 8, padding: '6px 8px', outline: 'none', color: '#444441' }} />
+            </div>
+          </div>
           <div style={{ marginBottom: 12, position: 'relative' }}>
             <input type="search" value={busqueda} aria-label="Buscar ventas"
               onChange={e => setBusqueda(e.target.value)}
