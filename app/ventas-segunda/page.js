@@ -262,7 +262,7 @@ export default function VentasSegundaPage() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500,
+              <a href="/desembolso" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500,
                 color: '#9BB4D8', textDecoration: 'none', padding: '4px 10px', borderRadius: 8, border: '0.5px solid #2D3A5A' }}>
                 <Icon name="arrow-left" size={14} /> Desembolso
               </a>
