@@ -872,7 +872,7 @@ export default function Dashboard() {
                   </div>
                   <div style={{ background: '#F7F6F2', borderRadius: '6px', padding: '7px 10px', border: '0.5px solid #E8E6DF' }}>
                     <p style={{ fontSize: '9px', fontWeight: '600', color: '#444441', marginBottom: '1px' }}>
-                      {'Coop. de Ahorro y Crédito Promotora de Negocios y Servicios'}
+                      {'COOPERATIVA DE SERVICIOS MULTIPLES GLOBAL GO PERU'}
                     </p>
                     <p style={{ fontSize: '9px', color: '#888780' }}>
                       {'Cód. PJ-2026-2095 · Constancia INS-2026-2312 · RUC 20523897048'}
@@ -882,7 +882,7 @@ export default function Dashboard() {
               </div>
               <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px', marginBottom: '14px', textAlign: 'left' }}>
                 <p style={{ fontSize: '9px', color: '#B4B2A9', lineHeight: '1.6' }}>
-                  {'La información contenida en esta plataforma es de carácter confidencial y de uso exclusivo del personal autorizado de Global Go S.A.C. y de la Cooperativa de Ahorro y Crédito Promotora de Negocios y Servicios. Su acceso, reproducción o divulgación no autorizada está prohibida.'}
+                  {'La información contenida en esta plataforma es de carácter confidencial y de uso exclusivo del personal autorizado de Global Go S.A.C. y de la Cooperativa de Servicios Múltiples Global Go Perú. Su acceso, reproducción o divulgación no autorizada está prohibida.'}
                 </p>
               </div>
               <div style={{ borderTop: '0.5px solid #E8E6DF', paddingTop: '12px' }}>
