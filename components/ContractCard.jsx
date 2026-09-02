@@ -104,6 +104,9 @@ export default function ContractCard({
   const displayEstado = contrato._estadoVista || estado
   const enModoLegal  = legalAutenticado === true
   const cfg = ESTADO_CONFIG[enModoLegal ? estado : displayEstado] || ESTADO_CONFIG['INGRESADO']
+  // AAC (con PIN) ve las observaciones automáticas del sistema como "En revisión legal":
+  // deja claro que están con Legal y que AAC no debe accionarlas. Comercial y Legal no cambian.
+  const badgeRevisionAAC = !enModoLegal && acAutenticado && estado === 'OBSERVADO_SISTEMA'
 
   const esObservado    = estado === 'CONTRATO_OBSERVADO'
   const intentos       = extraerIntentos(contrato)
@@ -231,10 +234,12 @@ export default function ContractCard({
         </div>
         <span style={{
           flexShrink: 0, fontSize: '10px', fontWeight: '500', padding: '3px 8px',
-          borderRadius: '20px', background: cfg.bgBadge, color: cfg.colorText,
-          border: `0.5px solid ${cfg.borderBadge}`, whiteSpace: 'nowrap',
+          borderRadius: '20px',
+          background: badgeRevisionAAC ? '#F3E8FF' : cfg.bgBadge,
+          color: badgeRevisionAAC ? '#6B21A8' : cfg.colorText,
+          border: `0.5px solid ${badgeRevisionAAC ? '#9333EA' : cfg.borderBadge}`, whiteSpace: 'nowrap',
         }}>
-          {cfg.labelCorto}
+          {badgeRevisionAAC ? 'En revisión legal' : cfg.labelCorto}
         </span>
       </div>
 
