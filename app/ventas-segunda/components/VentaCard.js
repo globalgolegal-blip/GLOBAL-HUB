@@ -1,7 +1,7 @@
 'use client'
 // app/ventas-segunda/components/VentaCard.js
 // Campos del objeto venta siguen la convención MAYÚSCULAS de parseSheets.js.
-// El índice de fila se lee de venta._idx (pasado por VentaList).
+// El índice de fila se lee de venta._idx (pasado por VentaList)
 
 import { useState, useRef } from 'react'
 import {
