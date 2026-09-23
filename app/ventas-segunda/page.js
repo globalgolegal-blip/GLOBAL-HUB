@@ -9,7 +9,7 @@ import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../
 import VentaList from './components/VentaList'
 import Icon from '../../components/Icon'
 import { hoyISO, mananaISO, ayerISO } from '../../lib/common/fechas'
-const VS_SCRIPT_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
+const VS_SCRIPT_URL = '/api/vs'
 const NAVY = '#1A2238'
 // Slots de agenda: cada 15 min dentro de los rangos permitidos
 // Lun–Vie: mañana 09:15–12:30 · tarde 14:15–16:30
