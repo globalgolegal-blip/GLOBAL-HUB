@@ -15,7 +15,7 @@ import {
 import { getPermisos } from '../../../lib/auth'
 import Icon from '../../../components/Icon'
 
-const VS_URL = process.env.NEXT_PUBLIC_VS_SCRIPT_URL
+const VS_URL = '/api/vs'
 const NAVY   = '#1A2238'
 
 // ── Helpers de UI ────────────────────────────────────────────
