@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [busquedaLegal, setBusquedaLegal] = useState('')
   const [regionLegal, setRegionLegal] = useState(null)
   const [ciudadLegal, setCiudadLegal] = useState(null)
-  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxE8kT5hBbav2OT-kiCSj3jz2xg_XW2v0y3DkUwHRBTAaaI0AgPTVHpbzL-_rHI9hhNHw/exec' // ✅ CORREGIDO: V24 (era V15)
+  const SHEET_URL = '/api/desembolso' // ✅ CORREGIDO: V24 (era V15)
   const cargarDatos = useCallback(async () => {
     setCargando(true)
     setError(null)
