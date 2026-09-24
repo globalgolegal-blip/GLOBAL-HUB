@@ -1,29 +1,39 @@
-// app/api/vs/route.js — Puente (BFF) con CACHÉ + REINTENTO para Ventas de Segunda.
-//
-// Despliega SOLO con commit a GitHub (Vercel construye solo). No requiere variable
-// de entorno ni tocar el panel de Vercel: la URL vive aquí, en el SERVIDOR, y este
-// archivo NUNCA se envía al navegador, así que la URL no queda expuesta.
+// app/api/vs/route.js — Proxy con CACHÉ EN MEMORIA + REINTENTO (Ventas de Segunda).
+// Caché controlada por nosotros (no depende del Data Cache de Next). Sirve las
+// cargas repetidas al instante; acciones y POST van directos y limpian la caché
+// (salvo las de solo-lectura, que no la limpian).
 import { NextResponse } from 'next/server'
-import { revalidateTag } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 
-// URL /exec del Apps Script de VS. Si defines VS_SCRIPT_URL en Vercel, esa manda.
 const SCRIPT_URL = process.env.VS_SCRIPT_URL
   || 'https://script.google.com/macros/s/AKfycbz-oivbhGf_nDcuDK85ImtyPws-R8QwuKH_vd2TqYmYRQkYos5y3GdVSzPQZoFu3JQFNw/exec'
 
-const TAG = 'vs-datos'
-const TTL = 15
+const TTL_MS = 15000
 const BACKOFFS = [0, 800, 2000, 4000]
-const ACCIONES_LECTURA = ['get_ciudades', 'get_gm_table', 'login']  // pasan directas, no purgan
-
+const ACCIONES_LECTURA = ['get_ciudades', 'get_gm_table', 'login']  // no limpian la caché
 const espera = (ms) => new Promise((r) => setTimeout(r, ms))
 
-function reenviar(texto, status, contentType) {
+let cacheDatos = null
+
+function reenviar(texto, status, contentType, extra) {
   return new NextResponse(texto, {
     status,
-    headers: { 'Content-Type': contentType || 'application/json; charset=utf-8' },
+    headers: { 'Content-Type': contentType || 'application/json; charset=utf-8', ...(extra || {}) },
   })
+}
+
+async function fetchConReintentos(url, opts) {
+  let ultimoError
+  for (let i = 0; i < BACKOFFS.length; i++) {
+    if (BACKOFFS[i]) await espera(BACKOFFS[i])
+    try {
+      const r = await fetch(url, opts)
+      if (r.status === 404 || r.status >= 500) { ultimoError = new Error('status ' + r.status); continue }
+      return r
+    } catch (e) { ultimoError = e }
+  }
+  throw ultimoError
 }
 
 export async function GET(req) {
@@ -34,58 +44,45 @@ export async function GET(req) {
   const destino = SCRIPT_URL + (params.toString() ? '?' + params.toString() : '')
 
   if (esAccion) {
-    let ultimoError
-    for (let i = 0; i < BACKOFFS.length; i++) {
-      if (BACKOFFS[i]) await espera(BACKOFFS[i])
-      try {
-        const r = await fetch(destino, { cache: 'no-store', redirect: 'follow' })
-        if (r.status === 404 || r.status >= 500) { ultimoError = new Error('status ' + r.status); continue }
-        const texto = await r.text()
-        if (ACCIONES_LECTURA.indexOf(action) === -1) { try { revalidateTag(TAG) } catch (e) {} }
-        return reenviar(texto, r.status, r.headers.get('content-type'))
-      } catch (e) { ultimoError = e }
+    try {
+      const r = await fetchConReintentos(destino, { cache: 'no-store', redirect: 'follow' })
+      const texto = await r.text()
+      if (ACCIONES_LECTURA.indexOf(action) === -1) cacheDatos = null   // solo las que modifican limpian
+      return reenviar(texto, r.status, r.headers.get('content-type'))
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: 'No se pudo procesar la solicitud. Intenta de nuevo.' }, { status: 502 })
     }
-    return NextResponse.json({ ok: false, error: 'No se pudo procesar la solicitud. Intenta de nuevo.' }, { status: 502 })
   }
 
-  let ultimoError
-  for (let i = 0; i < BACKOFFS.length; i++) {
-    if (BACKOFFS[i]) await espera(BACKOFFS[i])
-    try {
-      const r = await fetch(destino, { redirect: 'follow', next: { revalidate: TTL, tags: [TAG] } })
-      if (r.status === 404 || r.status >= 500) {
-        try { revalidateTag(TAG) } catch (e) {}
-        ultimoError = new Error('status ' + r.status)
-        continue
-      }
-      const texto = await r.text()
-      return reenviar(texto, r.status, r.headers.get('content-type'))
-    } catch (e) { ultimoError = e }
+  if (cacheDatos && (Date.now() - cacheDatos.at) < TTL_MS) {
+    return reenviar(cacheDatos.body, 200, cacheDatos.contentType, { 'X-Cache': 'HIT' })
   }
-  return NextResponse.json({ ok: false, error: 'El servicio no respondió. Intenta de nuevo en un momento.' }, { status: 502 })
+  try {
+    const r = await fetchConReintentos(destino, { cache: 'no-store', redirect: 'follow' })
+    const texto = await r.text()
+    if (r.status === 200) cacheDatos = { body: texto, contentType: r.headers.get('content-type'), at: Date.now() }
+    return reenviar(texto, r.status, r.headers.get('content-type'), { 'X-Cache': 'MISS' })
+  } catch (e) {
+    if (cacheDatos) return reenviar(cacheDatos.body, 200, cacheDatos.contentType, { 'X-Cache': 'STALE' })
+    return NextResponse.json({ ok: false, error: 'El servicio no respondió. Intenta de nuevo en un momento.' }, { status: 502 })
+  }
 }
 
-// POST (subir_boleta / subir_subsanacion): directo, sin caché, purga al final.
 export async function POST(req) {
   let cuerpo
   try { cuerpo = await req.text() } catch { return NextResponse.json({ ok: false, error: 'Petición mal formada' }, { status: 400 }) }
-
-  let ultimoError
-  for (let i = 0; i < BACKOFFS.length; i++) {
-    if (BACKOFFS[i]) await espera(BACKOFFS[i])
-    try {
-      const r = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: cuerpo,
-        redirect: 'follow',
-        cache: 'no-store',
-      })
-      if (r.status === 404 || r.status >= 500) { ultimoError = new Error('status ' + r.status); continue }
-      const texto = await r.text()
-      try { revalidateTag(TAG) } catch (e) {}
-      return reenviar(texto, r.status, r.headers.get('content-type'))
-    } catch (e) { ultimoError = e }
+  try {
+    const r = await fetchConReintentos(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: cuerpo,
+      redirect: 'follow',
+      cache: 'no-store',
+    })
+    const texto = await r.text()
+    cacheDatos = null
+    return reenviar(texto, r.status, r.headers.get('content-type'))
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: 'No se pudo subir el archivo. Intenta de nuevo.' }, { status: 502 })
   }
-  return NextResponse.json({ ok: false, error: 'No se pudo subir el archivo. Intenta de nuevo.' }, { status: 502 })
 }
