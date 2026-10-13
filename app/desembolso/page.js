@@ -88,6 +88,7 @@ export default function Dashboard() {
   const [busqueda, setBusqueda] = useState('')
   const [errorSolicitud, setErrorSolicitud] = useState(null)
   const [acAutenticado, setAcAutenticado] = useState(false)
+  const [perfilAC, setPerfilAC] = useState('AC')
   const [pinInput, setPinInput] = useState('')
   const [mostrarPin, setMostrarPin] = useState(false)
   const [pinError, setPinError] = useState(false)
@@ -229,7 +230,7 @@ export default function Dashboard() {
   }, [cargarDatos])
   function verificarPin() {
     if (pinInput === AC_PIN || pinInput === COMERCIAL_PIN) {
-      setAcAutenticado(true)
+      setPerfilAC(pinInput === COMERCIAL_PIN ? 'COMERCIAL' : 'AC'); setAcAutenticado(true)
       setMostrarPin(false)
       setPinInput('')
       setPinError(false)
@@ -410,7 +411,7 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <button
                 onClick={() => { setMostrarPin(v => !v); setPinError(false); setPinInput(''); setMostrarPinLegal(false) }}
-                title={acAutenticado ? 'AC autenticado' : 'Acceso AC'} aria-label="Acceso Atención al Cliente"
+                title={acAutenticado ? (perfilAC === 'COMERCIAL' ? 'Comercial autenticado' : 'AC autenticado') : 'Acceso AC'} aria-label="Acceso Atención al Cliente"
                 style={{ color: acAutenticado ? '#4A90D9' : '#9BB4D8', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', padding: 0 }}
               >
                 <Icon name="lock" size={19} />
@@ -478,9 +479,9 @@ export default function Dashboard() {
           )}
           {acAutenticado && mostrarPin && (
             <div style={{ marginTop: '12px', background: '#243050', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: '#4A90D9', fontWeight: '500' }}>{'AC autenticado'}</span>
+              <span style={{ fontSize: '11px', color: '#4A90D9', fontWeight: '500' }}>{perfilAC === 'COMERCIAL' ? 'Comercial autenticado' : 'AC autenticado'}</span>
               <button
-                onClick={() => { setAcAutenticado(false); setMostrarPin(false) }}
+                onClick={() => { setAcAutenticado(false); setPerfilAC('AC'); setMostrarPin(false) }}
                 style={{ fontSize: '11px', color: '#9BB4D8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 {'Cerrar sesion'}
