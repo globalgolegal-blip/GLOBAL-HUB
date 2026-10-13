@@ -8,6 +8,8 @@ import { getRegionDeCiudad, getDeptoDeciudad, ciudadesDeRegion } from '../../lib
 import Icon from '../../components/Icon'
 import { cargarJSON } from '../../lib/common/http'
 const AC_PIN = '159753'
+// 13-oct-2026 (JC): Comercial tambien pide el reenvio de contratos, con los mismos permisos que Atencion al Cliente.
+const COMERCIAL_PIN = '324498'
 const LEGAL_PIN = '4815926'
 const CATEGORIAS = [
 { key: 'PENDIENTE', label: 'Contratos por firmar', short: 'Por firmar', color: '#185FA5' },
@@ -226,7 +228,7 @@ export default function Dashboard() {
     } catch (err) { setErrorSolicitud('Error de conexion: ' + err.message) }
   }, [cargarDatos])
   function verificarPin() {
-    if (pinInput === AC_PIN) {
+    if (pinInput === AC_PIN || pinInput === COMERCIAL_PIN) {
       setAcAutenticado(true)
       setMostrarPin(false)
       setPinInput('')
@@ -439,7 +441,7 @@ export default function Dashboard() {
           {mostrarPin && !acAutenticado && (
             <div style={{ marginTop: '12px', background: '#243050', borderRadius: '10px', padding: '12px 14px' }}>
               <p style={{ fontSize: '11px', color: '#9BB4D8', marginBottom: '8px', fontWeight: '500' }}>
-                {'Acceso Atencion al Cliente'}
+                {'Acceso Atencion al Cliente / Comercial'}
               </p>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
