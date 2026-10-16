@@ -2,13 +2,13 @@
 // app/ventas-segunda/page.js
 // Comercial accede SIN PIN — ve cards y puede agendar citas.
 // Tesorería / Notaría / Legal se identifican con PIN para acciones elevadas.
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { loginVS } from '../../lib/auth'
 import { parsearVentas } from '../../lib/ventas-segunda/parseSheets'
 import { derivarEstadoVS, ESTADO_CONFIG_VS, tienePendienteParaRol } from '../../lib/ventas-segunda/utils'
 import VentaList from './components/VentaList'
 import Icon from '../../components/Icon'
-import { hoyISO, mananaISO, ayerISO } from '../../lib/common/fechas'
+import { hoyISO, mananaISO, ayerISO, ahoraLima } from '../../lib/common/fechas'
 const VS_SCRIPT_URL = '/api/vs'
 const NAVY = '#1A2238'
 // Slots de agenda: cada 15 min dentro de los rangos permitidos
@@ -82,7 +82,7 @@ export default function VentasSegundaPage() {
   const [ingresoDesde, setIngresoDesde] = useState('')
   const [ingresoHasta, setIngresoHasta] = useState('')
   const [vista, setVista] = useState('lista')
-  const [fechaAgenda, setFechaAgenda] = useState(hoyISO())
+  const [fechaAgenda, setFechaAgenda] = useState(hoyISO()); const ciudadesListas = useRef(false)
   const cargarVentas = useCallback(async (esInicial = false) => {
     if (!VS_SCRIPT_URL) { setErrorData('Variable NEXT_PUBLIC_VS_SCRIPT_URL no configurada.'); return }
     if (esInicial) setCargando(true)
@@ -92,7 +92,7 @@ export default function VentasSegundaPage() {
       const [resVentas, resGM, resCiudades] = await Promise.all([
         fetch(VS_SCRIPT_URL, { cache: 'no-store' }),
         fetch(`${VS_SCRIPT_URL}?action=get_gm_table`, { cache: 'no-store' }),
-        fetch(`${VS_SCRIPT_URL}?action=get_ciudades`, { cache: 'no-store' }),
+        (esInicial || !ciudadesListas.current) ? fetch(`${VS_SCRIPT_URL}?action=get_ciudades`, { cache: 'no-store' }) : Promise.resolve(null),
       ])
       if (!resVentas.ok) throw new Error(`Error HTTP ${resVentas.status}`)
       const data = await resVentas.json()
@@ -111,7 +111,7 @@ export default function VentasSegundaPage() {
         }
       } catch (_) { /* Si falla el fetch GM no bloqueamos la carga principal */ }
       try {
-        if (resCiudades.ok) {
+        if (resCiudades && resCiudades.ok) {
           const cData = await resCiudades.json()
           if (cData.ok && Array.isArray(cData.ciudades)) {
             const map = {}
@@ -119,7 +119,7 @@ export default function VentasSegundaPage() {
               const etiqueta = (c.notaria ? c.ciudad + ' - ' + c.notaria : c.ciudad)
               map[String(etiqueta || '').trim().toUpperCase()] = c
             })
-            setCiudadesCfg(map)
+            setCiudadesCfg(map); ciudadesListas.current = true
           }
         }
       } catch (_) { /* la config de ciudades no bloquea la carga */ }
@@ -139,8 +139,22 @@ export default function VentasSegundaPage() {
   }, [])
   useEffect(() => { cargarVentas(true) }, [cargarVentas])
   useEffect(() => {
-    const id = setInterval(() => cargarVentas(false), 90_000)
-    return () => clearInterval(id)
+    // 16-oct-2026: el refresco sigue siendo cada 90 s. Esta pantalla la coordinan
+  // Tesoreria, Notaria, Legal y Comercial a la vez, y una cita pasa sola a
+  // PENDIENTE_REAGENDA 30 min despues de la hora: la frecuencia hace falta.
+  // Lo que se corta es el gasto que no servia para nada: con la pestana oculta
+  // no se refresca, y entre las 21:00 y las 08:00 de Lima tampoco, porque nadie
+  // usa GoTrack a esa hora. Se usa ahoraLima(), no el reloj del equipo.
+  // La carga inicial NO pasa por aca: entrar a cualquier hora trae datos frescos.
+  const HORA_INICIO = 8 * 60, HORA_FIN = 21 * 60
+  const enHorario = () => { const { mins } = ahoraLima(); return mins >= HORA_INICIO && mins < HORA_FIN }
+  let id = null
+  const arrancar = () => { if (!id) id = setInterval(() => { if (enHorario()) cargarVentas(false) }, 90_000) }
+  const parar = () => { if (id) { clearInterval(id); id = null } }
+  const alCambiar = () => { if (document.visibilityState === 'visible') { if (enHorario()) cargarVentas(false); arrancar() } else parar() }
+  if (document.visibilityState === 'visible') arrancar()
+  document.addEventListener('visibilitychange', alCambiar)
+  return () => { parar(); document.removeEventListener('visibilitychange', alCambiar) }
   }, [cargarVentas])
   const verificarPin = async () => {
     const r = await loginVS(pinInput, VS_SCRIPT_URL)
