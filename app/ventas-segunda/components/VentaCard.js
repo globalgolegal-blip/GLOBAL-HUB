@@ -98,6 +98,33 @@ const inputStyle = {
   padding: '6px 8px', fontSize: 13, outline: 'none',
 }
 
+// Estados en los que Legal sube la TIVE: Tesorería ya confirmó el pago y
+// Notaría todavía no confirmó la cita. El servidor aplica la misma regla.
+const TIVE_ESTADOS = ['CONFIRMADO', 'EN_CITA', 'PENDIENTE_REAGENDA', 'SIN_CITA']
+
+// Lee el archivo para enviarlo. Las fotos grandes se reducen (máx. 1600 px)
+// para no pasar el límite del envío.
+async function leerArchivo(file) {
+  let blob = file
+  if (file.type.startsWith('image/') && file.size > 1.2 * 1024 * 1024) {
+    try {
+      const img = await createImageBitmap(file)
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height))
+      const c = document.createElement('canvas')
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k)
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
+      blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.82))
+    } catch { blob = file }
+  }
+  const base64 = await new Promise((ok, mal) => {
+    const fr = new FileReader()
+    fr.onload = () => ok(String(fr.result).split(',')[1] || '')
+    fr.onerror = mal
+    fr.readAsDataURL(blob)
+  })
+  return { tipo: blob.type || file.type, tam: blob.size, base64 }
+}
+
 // Mapeo de rol → nombre de área para etiquetar observaciones
 const AREA_NOMBRE = {
   tesoreria: 'TESORERÍA',
@@ -185,7 +212,12 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   const [reagendarOpen, setReagendarOpen] = useState(false)
   const [reagendarMotivo, setReagendarMotivo] = useState('')
   const [msg,             setMsg]             = useState(null)
-  const [subiendoBoleta,      setSubiendoBoleta]      = useState(false)
+  // Panel de carga de documentos: 'tive' (Legal) o 'boleta' (Tesorería)
+  const [docPanel,    setDocPanel]    = useState(null)
+  const [docArchivo,  setDocArchivo]  = useState(null)
+  const [numBoleta,   setNumBoleta]   = useState('')
+  const [subiendoDoc, setSubiendoDoc] = useState(false)
+  const [docError,    setDocError]    = useState('')
   const [subiendoSubsanacion, setSubiendoSubsanacion] = useState(false)
   // Edición de datos por Comercial (auto-detección o Legal-observado)
   const [editDatosOpen,  setEditDatosOpen]  = useState(false)
@@ -195,7 +227,6 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   const [editSC,         setEditSC]         = useState(venta.SOCIEDAD_CONYUGAL || 'No')
   const [editNomConyuge, setEditNomConyuge] = useState(venta.NOMBRE_CONYUGE || '')
   const [editDniConyuge, setEditDniConyuge] = useState(venta.DNI_CONYUGE || '')
-  const fileRef     = useRef(null)
   const fileRefSubs = useRef(null)
 
   const puedeAccion = (accion) => permisos.acciones.includes(accion)
@@ -203,6 +234,12 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
   const puedeObservar = puedeAccion('observar_docs') && (
     permisos.estadosObservar === '*' || permisos.estadosObservar.includes(estado)
   )
+
+  // Si está observado, cuenta el estado en que estaba antes de la observación.
+  const estadoBaseTive = (estado === 'DOCS_OBSERVADOS' || estado === 'DOCS_SUBSANADOS')
+    ? (estadoPrevioObs || '').toUpperCase() : estado
+  const puedeSubirTive    = TIVE_ESTADOS.includes(estadoBaseTive)
+  const puedeSubirBoleta  = !!venta.FECHA_FIRMA
 
   // ── Llamada a la API ───────────────────────────────────────
   async function llamarAPI(params) {
@@ -285,36 +322,46 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
     })
   }
 
-  const subirBoleta = async (file) => {
-    if (!file || !VS_URL) return
-    setSubiendoBoleta(true)
-    setMsg(null)
+  const abrirDoc = (cual) => {
+    setDocPanel(cual); setDocArchivo(null); setDocError('')
+    setNumBoleta(cual === 'boleta' ? (venta.NUMERO_BOLETA || '') : '')
+  }
+
+  // TIVE (Legal) y boleta de venta (Tesorería): se envía y se muestra la
+  // respuesta del servidor tal cual, sea el aviso de listo o el motivo del rechazo.
+  const enviarDocumento = async () => {
+    if (!docArchivo) return
+    const esBoleta = docPanel === 'boleta'
+    const numero = numBoleta.trim().toUpperCase().replace(/\s+/g, '')
+    if (esBoleta && !numero) { setDocError('Escribe el número de la boleta.'); return }
+    setSubiendoDoc(true); setDocError(''); setMsg(null)
     try {
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = (e) => resolve(e.target.result.split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-      // text/plain = simple request → sin preflight CORS
-      await fetch(VS_URL, {
-        method:   'POST',
-        mode:     'no-cors',
-        headers:  { 'Content-Type': 'text/plain' },
-        body:     JSON.stringify({
-          action:      'subir_boleta',
-          placa:       venta.PLACA,
-          fileBase64:  base64,
-          mimeType:    file.type,
+      let a
+      try { a = await leerArchivo(docArchivo) }
+      catch { setDocError('No se pudo leer el archivo. Vuelve a adjuntarlo.'); return }
+      if (a.tam > 3 * 1024 * 1024) { setDocError('El archivo pesa más de 3 MB. Usa uno más liviano.'); return }
+      const res = await fetch(VS_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body:    JSON.stringify({
+          action:     esBoleta ? 'subir_boleta_venta' : 'subir_tive',
+          placa:      venta.PLACA,
+          numero:     esBoleta ? numero : undefined,
+          fileBase64: a.base64,
+          mimeType:   a.tipo,
         }),
       })
-      setMsg({ tipo: 'ok', texto: 'Boleta enviada — se verá al próximo refresco.' })
-      setTimeout(() => { setMsg(null); onActualizar?.() }, 3000)
+      let data = null
+      try { data = await res.json() } catch { data = null }
+      if (!data) { setDocError('No hubo respuesta clara del servidor. Recarga en un momento y revisa si el archivo quedó cargado antes de volver a subirlo.'); return }
+      if (!data.ok) { setDocError(data.error || 'No se pudo guardar el archivo.'); return }
+      setDocPanel(null); setDocArchivo(null)
+      setMsg({ tipo: 'ok', texto: data.mensaje || 'Archivo guardado.' })
+      setTimeout(() => { setMsg(null); onActualizar?.() }, 1800)
     } catch (e) {
-      setMsg({ tipo: 'err', texto: 'Error al subir: ' + e.message })
+      setDocError('No se pudo enviar el archivo. Revisa la conexión e intenta de nuevo.')
     } finally {
-      setSubiendoBoleta(false)
-      if (fileRef.current) fileRef.current.value = ''
+      setSubiendoDoc(false)
     }
   }
 
@@ -446,7 +493,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
               <LinkDoc url={venta.PAGO_NOTARIALES} label="Pago notariales" />
               <LinkDoc url={venta.TIVE_URL}        label="TIVE"            />
               <LinkDoc url={venta.SOAT_URL}        label="SOAT"            />
-              <LinkDoc url={venta.BOLETA_URL}       label="Boleta VS"        highlight={!!venta.BOLETA_URL} />
+              <LinkDoc url={venta.BOLETA_URL}       label={venta.NUMERO_BOLETA ? `Boleta ${venta.NUMERO_BOLETA}` : 'Boleta VS'} highlight={!!venta.BOLETA_URL} />
               <LinkDoc url={venta.SUBSANACION_URL}  label="Doc subsanado"    />
             </div>
           )}
@@ -741,21 +788,22 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     Confirmar subsanación
                   </Btn>
                 )}
-                {/* Boleta — siempre disponible para Tesorería */}
-                <Btn onClick={() => fileRef.current?.click()} disabled={subiendoBoleta} color="#6D28D9" small outline icon="upload">
-                  {subiendoBoleta ? 'Subiendo…' : venta.BOLETA_URL ? 'Reemplazar boleta' : 'Subir boleta'}
-                </Btn>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/jpg,application/pdf"
-                  style={{ display: 'none' }}
-                  onChange={e => { if (e.target.files?.[0]) subirBoleta(e.target.files[0]) }}
-                />
+                {/* Boleta de venta — al final, cuando Notaría ya registró la firma */}
+                {puedeSubirBoleta && docPanel !== 'boleta' && (
+                  <Btn onClick={() => abrirDoc('boleta')} color="#6D28D9" icon="upload">
+                    {venta.BOLETA_URL ? 'Reemplazar boleta de venta' : 'Cargar boleta de venta'}
+                  </Btn>
+                )}
               </div>
             )}
 
             {/* NOTARÍA */}
+            {rol === 'notaria' && !enProceso && puedeSubirTive && !venta.TIVE_URL && (
+              <div style={{ fontSize: 12, color: '#92400E', background: '#FFFBEB',
+                border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px' }}>
+                Falta la TIVE: Legal todavía no la sube.
+              </div>
+            )}
             {rol === 'notaria' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {estado === 'EN_CITA' && puedeAccion('confirmar_cita') && (
@@ -825,6 +873,12 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {/* LEGAL */}
             {rol === 'legal' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {/* TIVE — después de que Tesorería confirma y antes de que Notaría confirme la cita */}
+                {puedeSubirTive && docPanel !== 'tive' && (
+                  <Btn onClick={() => abrirDoc('tive')} color="#0F766E" icon="upload">
+                    {venta.TIVE_URL ? 'Reemplazar TIVE' : 'Subir TIVE'}
+                  </Btn>
+                )}
                 {/* GM pendiente de levantar — Legal responde con este botón */}
                 {aplicaGMCiudad && venta.GM_SOLICITADA && !venta.GM_LEVANTADA && puedeAccion('levantar_gm') && (
                   <Btn onClick={levantarGM} disabled={cargando} color="#065F46" icon="check">
@@ -857,6 +911,46 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                     {datosInvalidos ? 'Observar datos inválidos' : '📝 Observar contenido'}
                   </Btn>
                 )}
+              </div>
+            )}
+
+            {/* Panel de carga: TIVE (Legal) o boleta de venta (Tesorería) */}
+            {docPanel && ((docPanel === 'tive' && rol === 'legal') || (docPanel === 'boleta' && rol === 'tesoreria')) && (
+              <div style={{ background: '#fff', border: '1px solid #D3D1C7', borderRadius: 8, padding: 12 }}>
+                <p style={{ fontSize: 12, color: NAVY, margin: '0 0 4px', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {docPanel === 'tive' ? 'Subir TIVE del vehículo' : 'Cargar boleta de venta'}
+                </p>
+                <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 10px', lineHeight: 1.5 }}>
+                  {docPanel === 'tive'
+                    ? 'Queda en el expediente para que Notaría la vea antes de confirmar la cita.'
+                    : 'Escribe el número tal como sale en la boleta y adjunta el archivo.'}
+                </p>
+                {docPanel === 'boleta' && (
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 4 }}>
+                      N° de boleta
+                    </label>
+                    <input value={numBoleta} onChange={e => { setNumBoleta(e.target.value.toUpperCase()); setDocError('') }}
+                      placeholder="Ej. B001-000123" maxLength={25}
+                      style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                )}
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                  onChange={e => { setDocArchivo(e.target.files?.[0] || null); setDocError('') }}
+                  style={{ fontSize: 13, marginBottom: 6, maxWidth: '100%' }} />
+                <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 10px' }}>PDF, JPG o PNG · hasta 3 MB.</p>
+                {docError && (
+                  <p style={{ fontSize: 12, color: '#B91C1C', margin: '0 0 8px', lineHeight: 1.5 }}>{docError}</p>
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Btn onClick={enviarDocumento}
+                    disabled={!docArchivo || subiendoDoc || (docPanel === 'boleta' && !numBoleta.trim())}
+                    color={docPanel === 'tive' ? '#0F766E' : '#6D28D9'} icon="check">
+                    {subiendoDoc ? 'Subiendo…' : docPanel === 'tive' ? 'Guardar TIVE' : 'Guardar boleta'}
+                  </Btn>
+                  <Btn onClick={() => setDocPanel(null)} color="#6B7280" small outline>Cancelar</Btn>
+                </div>
               </div>
             )}
 
