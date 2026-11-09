@@ -431,7 +431,7 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', gap: '18px', marginTop: '12px' }}>
             <span style={{ color: '#fff', fontSize: '12px', paddingBottom: '6px', borderBottom: '2px solid #fff' }}>Desembolso</span>
-            <a href="/ventas-segunda" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#9BB4D8', fontSize: '12px', textDecoration: 'none', paddingBottom: '6px', borderBottom: '2px solid transparent' }}>
+            <a href="https://gotrack-vs.vercel.app/ventas-segunda" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#9BB4D8', fontSize: '12px', textDecoration: 'none', paddingBottom: '6px', borderBottom: '2px solid transparent' }}>
               Ventas de segunda <Icon name="arrow-right" size={14} />
             </a>
                 <a href="https://globalgo-levantamiento-gm.vercel.app/?v=final"
