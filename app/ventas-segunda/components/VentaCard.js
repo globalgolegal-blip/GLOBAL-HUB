@@ -789,7 +789,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
                   </Btn>
                 )}
                 {/* Boleta de venta — al final, cuando Notaría ya registró la firma */}
-                {puedeSubirBoleta && docPanel !== 'boleta' && (
+                {puedeSubirBoleta && (
                   <Btn onClick={() => abrirDoc('boleta')} color="#6D28D9" icon="upload">
                     {venta.BOLETA_URL ? 'Reemplazar boleta de venta' : 'Cargar boleta de venta'}
                   </Btn>
@@ -874,7 +874,7 @@ export default function VentaCard({ venta, rol, onActualizar, enConflicto = fals
             {rol === 'legal' && !enProceso && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {/* TIVE — después de que Tesorería confirma y antes de que Notaría confirme la cita */}
-                {puedeSubirTive && docPanel !== 'tive' && (
+                {puedeSubirTive && (
                   <Btn onClick={() => abrirDoc('tive')} color="#0F766E" icon="upload">
                     {venta.TIVE_URL ? 'Reemplazar TIVE' : 'Subir TIVE'}
                   </Btn>
